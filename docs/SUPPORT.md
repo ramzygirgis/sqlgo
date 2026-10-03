@@ -1,1 +1,2 @@
-supports the following sql operations:
+currently supports standalone queries of the form:
+"SELECT * FROM * \[WHERE *\]"
