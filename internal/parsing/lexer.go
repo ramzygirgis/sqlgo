@@ -7,31 +7,31 @@ import (
 
 // this function strips a query of leading and trailing whitespace,
 // and converts ending ';' into EOF.
-func clean_query(query_string string) (string, error) {
-	trimmed_query := strings.TrimSpace(query_string)
-	length := len(trimmed_query) - 1
+func cleanQuery(queryString string) (string, error) {
+	trimmedQuery := strings.TrimSpace(queryString)
+	length := len(trimmedQuery) - 1
 	if length == 0 {
 		return "", fmt.Errorf("query is empty")
 	}
-	if trimmed_query[length-1] != ';' {
+	if trimmedQuery[length-1] != ';' {
 		return "", fmt.Errorf("query does not contain a terminator")
 	}
-	cleaned_query := trimmed_query[:length-1] + " SEMICOLON"
-	return cleaned_query, nil
+	cleanedQuery := trimmedQuery[:length-1] + " SEMICOLON"
+	return cleanedQuery, nil
 }
 
 // this function takes in a query_string and returns a list of atoms
-func query_to_atoms(query_string string) ([]string, error) {
+func queryToAtoms(queryString string) ([]string, error) {
 	// TODO: convert (a, b, c) into [a, b, c]
-	cleaned_query, err := clean_query(query_string)
+	cleanedQuery, err := cleanQuery(queryString)
 	if err != nil {
 		return []string{}, err
 	}
-	return strings.Fields(cleaned_query), nil
+	return strings.Fields(cleanedQuery), nil
 }
 
 // this function takes in an atom and returns a token
-func atom_to_token(atom string) string {
+func atomToToken(atom string) string {
 	switch strings.ToLower(atom) {
 	case "select":
 		return `KEYWORD("SELECT")`
@@ -46,14 +46,14 @@ func atom_to_token(atom string) string {
 }
 
 // this function takes in a query and returns a slice of tokens
-func query_to_tokens(query_string string) ([]string, error) {
-	atoms, err := query_to_atoms(query_string)
+func queryToTokens(queryString string) ([]string, error) {
+	atoms, err := queryToAtoms(queryString)
 	if err != nil {
 		return []string{}, err
 	}
 	res := make([]string, len(atoms)+1)
 	for i, atom := range atoms {
-		res[i] = atom_to_token(atom)
+		res[i] = atomToToken(atom)
 	}
 	return res, nil
 }
