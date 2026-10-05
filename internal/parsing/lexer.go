@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+// QUESTION:
+// at what layer should we inject a "EOF" at the end of the text?
+// maybe, we add this to queryString in pre-processing. need to figure this out
+
 // this function strips a query of leading and trailing whitespace,
 // and converts ending ';' into EOF.
 func cleanQuery(queryString string) (string, error) {
@@ -27,22 +31,41 @@ func queryToAtoms(queryString string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	return strings.Fields(cleanedQuery), nil
+	atoms := strings.Fields(cleanedQuery)
+	if len(atoms) == 0 {
+		return []string{}, fmt.Errorf("query is empty")
+	}
+	return atoms, nil
 }
 
 // this function takes in an atom and returns a token
-func atomToToken(atom string) string {
+func atomToToken(atom string) Token {
 	switch strings.ToLower(atom) {
 	case "select":
-		return `KEYWORD("SELECT")`
+		return Token{
+			kind: Keyword,
+			body: "SELECT",
+		}
 	case "from":
-		return `KEYWORD("FROM")`
-	case "where":
-		return `KEYWORD("WHERE")`
+		return Token{
+			kind: Keyword,
+			body: "SELECT",
+		}
+	case "semicolon":
+		return Token{
+			kind: Semicolon,
+			body: ";",
+		}
 	case "eof":
-		return "SEMICOLON"
+		return Token{
+			kind: EOF,
+			body: "EOF",
+		}
 	}
-	return fmt.Sprintf(`IDENTIFIER("%s")`, strings.ToLower(atom))
+	return Token{
+		kind: Identifier,
+		body: atom,
+	}
 }
 
 // this function takes in a query and returns a slice of tokens
