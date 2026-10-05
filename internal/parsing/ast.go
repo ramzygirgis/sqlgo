@@ -1,26 +1,26 @@
 package parsing
 
 import (
-	"fmt"
+// "fmt"
 )
 
-func parseStatement(queryString string) (AST, error) {
-	queryToTokens, err := queryToTokens(queryString)
-	if err != nil {
-		return AST{}, err
-	}
-	// TODO
-	return AST{}, err
-}
+// QUESTIONS:
+// how should i structure the AST?
+// deciding what top level components should look like,
+// and how to handle recursion is a pretty important problem to handle.
+// i think using callbacks would be pretty nice, but need to come up
+// with the best abstraction.
+//
+// how should i implement parseStatement? i think it makes
+// most sense to treat tokens as a sort of stream.
 
-func buildASTfromQuery(queryString string) (AST, error) {
-	queryToTokens, err := queryToTokens(queryString)
+func parseStatement(queryString string) (AST, error) {
+	tokens, err := queryToTokens(queryString)
 	if err != nil {
 		return AST{}, err
 	}
-	if queryToTokens[0] != `"KEYWORD("SELECT")` {
-		return AST{}, fmt.Errorf("query does not begin with a SELECT keyword")
-	}
+	tokens = tokens
+	return AST{}, err
 }
 
 // idea: when turning atoms into tokens, store in a struct
