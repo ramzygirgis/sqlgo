@@ -5,6 +5,41 @@ import (
 	"slices"
 )
 
+/* PRASER TYPES */
+
+type parser struct {
+	toks []Token
+	pos  int
+}
+
+func (p *parser) peek() Token {
+	if p.pos >= len(p.toks) || p.pos < 0 {
+		return Token{
+			kind: EOF,
+			body: "",
+		}
+	}
+	return p.toks[p.pos]
+}
+
+func (p *parser) next() Token {
+	p.pos += 1
+	return p.peek()
+}
+
+func (p *parser) expect(k TokenKind, body string) (Token, error) {
+	if p.peek().kind != k {
+		return Token{}, fmt.Errorf("unexpected token kind: expected %v, got %v", k, p.peek().kind)
+	}
+	if p.peek().body != body {
+		return Token{}, fmt.Errorf("unexpected token body: expected %s, got %s", body, p.peek().body)
+	}
+	return Token{
+		kind: k,
+		body: body,
+	}, nil
+}
+
 /* TOKEN TYPES */
 
 type TokenKind int
@@ -22,6 +57,12 @@ type Token struct {
 }
 
 /* AST TYPES */
+
+type Statement interface {
+	stmtNode()
+}
+
+//TODO: implement this method for all of the below
 
 // columns (public)
 
