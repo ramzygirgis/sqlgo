@@ -35,10 +35,7 @@ func (p *parser) expect(k TokenKind, body string) (Token, error) {
 	if p.peek().body != body {
 		return Token{}, fmt.Errorf("unexpected token body: expected %s, got %s", body, p.peek().body)
 	}
-	return Token{
-		kind: k,
-		body: body,
-	}, nil
+	return p.next(), nil
 }
 
 /* TOKEN TYPES */
