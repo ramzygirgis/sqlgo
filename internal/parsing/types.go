@@ -23,8 +23,9 @@ func (p *parser) peek() Token {
 }
 
 func (p *parser) next() Token {
+	tok := p.peek()
 	p.pos += 1
-	return p.peek()
+	return tok
 }
 
 func (p *parser) expect(k TokenKind, body string) (Token, error) {
@@ -45,7 +46,8 @@ func (p *parser) expect(k TokenKind, body string) (Token, error) {
 type TokenKind int
 
 const (
-	Identifier TokenKind = iota
+	Illegal TokenKind = iota
+	Identifier
 	Keyword
 	Semicolon
 	EOF
@@ -61,8 +63,6 @@ type Token struct {
 type Statement interface {
 	stmtNode()
 }
-
-//TODO: implement this method for all of the below
 
 // columns (public)
 
@@ -106,6 +106,8 @@ type SelectStatement struct {
 	from    FromStatement
 }
 
+func (s *SelectStatement) statementNode() {}
+
 // note on design: error checking should happen at the first level where this error occurs
 // one couldn't detect whether we are selecting invalid columns from a table without
 // the SelectStatement struct. this is therefore the lowest level at which this error can occur.
@@ -116,10 +118,4 @@ func (s SelectStatement) ValidateSELECT() (bool, error) {
 		}
 	}
 	return true, nil
-}
-
-// AST
-
-type AST struct {
-	selectStatement SelectStatement
 }

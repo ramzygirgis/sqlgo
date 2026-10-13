@@ -12,15 +12,14 @@ import (
 // this function strips a query of leading and trailing whitespace,
 // and converts ending ';' into EOF.
 func cleanQuery(queryString string) (string, error) {
-	trimmedQuery := strings.TrimSpace(queryString)
-	length := len(trimmedQuery) - 1
+	cleanedQuery := strings.TrimSpace(queryString)
+	length := len(cleanedQuery)
 	if length == 0 {
 		return "", fmt.Errorf("query is empty")
 	}
-	if trimmedQuery[length-1] != ';' {
+	if cleanedQuery[length-1] != ';' {
 		return "", fmt.Errorf("query does not contain a terminator")
 	}
-	cleanedQuery := trimmedQuery[:length-1] + " SEMICOLON"
 	return cleanedQuery, nil
 }
 
@@ -49,9 +48,9 @@ func atomToToken(atom string) Token {
 	case "FROM":
 		return Token{
 			kind: Keyword,
-			body: "SELECT",
+			body: "FROM",
 		}
-	case "SEMICOLON":
+	case ";":
 		return Token{
 			kind: Semicolon,
 			body: ";",
@@ -74,7 +73,7 @@ func queryToTokens(queryString string) ([]Token, error) {
 	if err != nil {
 		return []Token{}, err
 	}
-	res := make([]Token, len(atoms)+1)
+	res := make([]Token, len(atoms))
 	for i, atom := range atoms {
 		res[i] = atomToToken(atom)
 	}
