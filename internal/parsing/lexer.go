@@ -40,23 +40,23 @@ func queryToAtoms(queryString string) ([]string, error) {
 
 // this function takes in an atom and returns a token
 func atomToToken(atom string) Token {
-	switch strings.ToLower(atom) {
-	case "select":
+	switch strings.ToUpper(atom) {
+	case "SELECT":
 		return Token{
 			kind: Keyword,
 			body: "SELECT",
 		}
-	case "from":
+	case "FROM":
 		return Token{
 			kind: Keyword,
 			body: "SELECT",
 		}
-	case "semicolon":
+	case "SEMICOLON":
 		return Token{
 			kind: Semicolon,
 			body: ";",
 		}
-	case "eof":
+	case "EOF":
 		return Token{
 			kind: EOF,
 			body: "EOF",
@@ -69,12 +69,12 @@ func atomToToken(atom string) Token {
 }
 
 // this function takes in a query and returns a slice of tokens
-func queryToTokens(queryString string) ([]string, error) {
+func queryToTokens(queryString string) ([]Token, error) {
 	atoms, err := queryToAtoms(queryString)
 	if err != nil {
-		return []string{}, err
+		return []Token{}, err
 	}
-	res := make([]string, len(atoms)+1)
+	res := make([]Token, len(atoms)+1)
 	for i, atom := range atoms {
 		res[i] = atomToToken(atom)
 	}
