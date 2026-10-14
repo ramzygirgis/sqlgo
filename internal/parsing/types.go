@@ -100,7 +100,7 @@ type FromStatement struct {
 
 type SelectStatement struct {
 	columns []Column
-	from    FromStatement
+	from    *FromStatement
 }
 
 func (s *SelectStatement) statementNode() {}
