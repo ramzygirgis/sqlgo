@@ -38,23 +38,10 @@ func (c Column) GetName() string {
 	return c.name
 }
 
-// tables (public)
+// tables (public) (maybe refactor to just include name)
 
 type Table struct {
-	name    string
-	columns []Column
-}
-
-func (t Table) GetName() string {
-	return t.name
-}
-
-func (t Table) GetColumns() []Column {
-	return t.columns
-}
-
-func (t Table) ContainsColumn(c Column) bool {
-	return slices.Contains(t.columns, c)
+	name string
 }
 
 // FROM statement

@@ -26,7 +26,11 @@ func (p *parser) next() Token {
 }
 
 func (p *parser) expect(k TokenKind, body string) (Token, error) {
-	if p.peek().kind != k || p.peek().body != body {
+	expected := Token{
+		kind: k,
+		body: body,
+	}
+	if p.peek() != expected {
 		return Token{}, fmt.Errorf("unexpected %v %s, got %v %s", k, body, p.peek().kind, p.peek().body)
 	}
 	return p.next(), nil
@@ -43,6 +47,15 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		}
 		cols = append(cols, col)
 	}
+
+	cur := p.next()
+	if cur != Token{
+		kind: Keyword,
+		body: "FROM",
+	} {
+		return &SelectStatement{}, fmt.Errorf("expected Keyword FROM, got %v %s", cur.kind, cur.body)
+	}
+
 	from, err := p.parseFrom()
 	if err != nil {
 		return &SelectStatement{}, err
@@ -53,8 +66,30 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	}, nil
 }
 
-func (p *parser) parseFrom() (*FromStatement, error) {}
+func (p *parser) parseFrom() (*FromStatement, error) {
+	if _, err := p.expect(Keyword, "FROM"); err != nil {
+		return &FromStatement{}, err
+	}
+	if p.peek().kind != Identifier {
+		return &FromStatement{}, fmt.Errorf("expected table name identifier, got %v %s", p.peek().kind, p.peek().body)
+	}
+	table = p.next()
+	from := FromStatement{
+		table: Table{
+			name: table.body,
+		},
+	}
+	
+	if err := p.parseEnd(); err != nil {
+		return &FromStatement{}, err
+	}
 
+	return &from, nil
+}
+
+func (p *parser) parseEnd() err {
+
+}
 func parseTokens(toks []Token) {
 
 }
