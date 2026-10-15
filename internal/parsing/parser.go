@@ -52,6 +52,11 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	if err != nil {
 		return &SelectStatement{}, err
 	}
+
+	if err := p.parseEnd(); err != nil {
+		return &SelectStatement{}, err
+	}
+
 	return &SelectStatement{
 		columns: cols,
 		from:    from,
@@ -72,22 +77,11 @@ func (p *parser) parseFrom() (*FromStatement, error) {
 		},
 	}
 
-	if err := p.parseEnd(); err != nil {
-		return &FromStatement{}, err
-	}
-
 	return &from, nil
 }
 
 func (p *parser) parseEnd() error {
 	if _, err := p.expect(Semicolon, ";"); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *parser) parseEOF() error {
-	if _, err := p.expect(EOF, "EOF"); err != nil {
 		return err
 	}
 	return nil
