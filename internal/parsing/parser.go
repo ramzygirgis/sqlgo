@@ -13,7 +13,7 @@ func (p *parser) peek() Token {
 	if p.pos >= len(p.toks) || p.pos < 0 {
 		return Token{
 			kind: EOF,
-			body: "",
+			body: "EOF",
 		}
 	}
 	return p.toks[p.pos]
@@ -46,14 +46,6 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 			name: p.next().body,
 		}
 		cols = append(cols, col)
-	}
-
-	cur := p.next()
-	if (cur != Token{
-		kind: Keyword,
-		body: "FROM",
-	}) {
-		return &SelectStatement{}, fmt.Errorf("expected Keyword FROM, got %v %s", cur.kind, cur.body)
 	}
 
 	from, err := p.parseFrom()
