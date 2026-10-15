@@ -49,10 +49,10 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	}
 
 	cur := p.next()
-	if cur != Token{
+	if (cur != Token{
 		kind: Keyword,
 		body: "FROM",
-	} {
+	}) {
 		return &SelectStatement{}, fmt.Errorf("expected Keyword FROM, got %v %s", cur.kind, cur.body)
 	}
 
@@ -73,13 +73,13 @@ func (p *parser) parseFrom() (*FromStatement, error) {
 	if p.peek().kind != Identifier {
 		return &FromStatement{}, fmt.Errorf("expected table name identifier, got %v %s", p.peek().kind, p.peek().body)
 	}
-	table = p.next()
+	table := p.next()
 	from := FromStatement{
 		table: Table{
 			name: table.body,
 		},
 	}
-	
+
 	if err := p.parseEnd(); err != nil {
 		return &FromStatement{}, err
 	}
@@ -87,9 +87,16 @@ func (p *parser) parseFrom() (*FromStatement, error) {
 	return &from, nil
 }
 
-func (p *parser) parseEnd() err {
-
+func (p *parser) parseEnd() error {
+	if _, err := p.expect(Semicolon, ";"); err != nil {
+		return err
+	}
+	return nil
 }
-func parseTokens(toks []Token) {
 
+func (p *parser) parseEOF() error {
+	if _, err := p.expect(EOF, "EOF"); err != nil {
+		return err
+	}
+	return nil
 }
