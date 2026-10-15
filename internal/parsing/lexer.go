@@ -89,16 +89,31 @@ func lex(input string) ([]Token, error) {
 	for i < len(input) {
 		c := input[i]
 		switch {
-		case c == " ":
+		case c == ' ':
 			i++
-		case c == ",":
-			toks = append(toks, Token{ kind: Comma, body: "," })
+		case c == ',':
+			toks = append(toks, Token{kind: Comma, body: ","})
 			i++
-		case c == ";":
-			toks = append(toks, Token{ kind: Semicolon, body: ";" })
+		case c == ';':
+			toks = append(toks, Token{kind: Semicolon, body: ";"})
 			i++
-		case c == "":
+		case isValidChar(c):
+			start := i
+			for {
+				i++
+				if i == len(input) || !isValidChar(input[i]) {
+					body := input[start:i]
+					if isKeyword(body) {
+						toks = append(toks, Token{kind: Keyword, body: body})
+					} else {
+						toks = append(toks, Token{kind: Identifier, body: body})
+					}
+					break
+				}
+			}
 		default:
 			return toks, fmt.Errorf("unexpected character %s at position %d", c, i)
+		}
 	}
+	return toks, nil
 }
