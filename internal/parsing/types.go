@@ -12,6 +12,7 @@ const (
 	Illegal TokenKind = iota
 	Identifier
 	Keyword
+	Comma
 	Semicolon
 	EOF
 )

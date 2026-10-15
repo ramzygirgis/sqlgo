@@ -82,3 +82,23 @@ func queryToTokens(queryString string) ([]Token, error) {
 
 // these above functions should eventually be portable to a whole page's queries. this means recursing and shit,
 // but adding a EOF at the top level. for now, no EOF is needed as we don't have CTEs yet
+
+func lex(input string) ([]Token, error) {
+	var toks []Token
+	i := 0
+	for i < len(input) {
+		c := input[i]
+		switch {
+		case c == " ":
+			i++
+		case c == ",":
+			toks = append(toks, Token{ kind: Comma, body: "," })
+			i++
+		case c == ";":
+			toks = append(toks, Token{ kind: Semicolon, body: ";" })
+			i++
+		case c == "":
+		default:
+			return toks, fmt.Errorf("unexpected character %s at position %d", c, i)
+	}
+}
