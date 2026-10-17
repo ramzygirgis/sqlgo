@@ -40,8 +40,9 @@ func lex(input string) ([]Token, error) {
 				}
 			}
 		default:
-			return toks, fmt.Errorf("unexpected character %s at position %d", c, i)
+			return []Token{}, fmt.Errorf("unexpected character %s at position %d", c, i)
 		}
 	}
+	toks = append(toks, Token{kind: EOF, body: "EOF"})
 	return toks, nil
 }
