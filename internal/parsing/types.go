@@ -9,6 +9,7 @@ const (
 	Identifier
 	Keyword
 	Comma
+	Star
 	Semicolon
 	EOF
 )

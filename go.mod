@@ -1,5 +1,3 @@
-module github.com/ramzygirgis/sqlgo.git
+module github.com/ramzygirgis/sqlgo
 
 go 1.27.1
-
-require github.com/ajitpratap0/GoSQLX v1.14.0

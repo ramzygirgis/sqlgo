@@ -10,6 +10,9 @@ type parser struct {
 }
 
 func (p *parser) peek() []Token {
+	if p.pos >= len(p.toks) {
+		return []Token{}
+	}
 	return p.toks[p.pos:]
 }
 

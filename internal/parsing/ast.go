@@ -1,7 +1,7 @@
 package parsing
 
 func Parse(query string) (Statement, error) {
-	toks, err := lex(query)
+	toks, err := Lex(query)
 	p := parser{
 		toks: toks,
 		pos:  0,

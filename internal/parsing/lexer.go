@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func lex(input string) ([]Token, error) {
+func Lex(input string) ([]Token, error) {
 	cleanedQuery, err := cleanQuery(input)
 	if err != nil {
 		return []Token{}, err
@@ -15,6 +15,9 @@ func lex(input string) ([]Token, error) {
 		c := cleanedQuery[i]
 		switch {
 		case c == ' ':
+			i++
+		case c == '*':
+			toks = append(toks, Token{kind: Star, body: "*"})
 			i++
 		case c == ',':
 			toks = append(toks, Token{kind: Comma, body: ","})
@@ -37,7 +40,7 @@ func lex(input string) ([]Token, error) {
 				}
 			}
 		default:
-			return []Token{}, fmt.Errorf("unexpected character %s at position %d", c, i)
+			return []Token{}, fmt.Errorf("unexpected character %s at position %d", string(c), i)
 		}
 	}
 	toks = append(toks, Token{kind: EOF, body: "EOF"})

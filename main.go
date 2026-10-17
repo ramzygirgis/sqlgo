@@ -1,37 +1,32 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"github.com/ajitpratap0/GoSQLX/pkg/gosqlx"
-	"github.com/ajitpratap0/GoSQLX/pkg/sql/ast"
-	"log"
+	"github.com/ramzygirgis/sqlgo/internal/parsing"
 )
 
 func main() {
-	ctx := context.Background()
+	sqlQuery := `SELECT * FROM users;`
+	fmt.Printf("Lex Test:\n")
+	testLex(sqlQuery)
+	fmt.Printf("Parse Test:\n")
+	testParse(sqlQuery)
+}
 
-	// ParseTree (v1.15+) is the recommended entry point. It returns an
-	// opaque handle with built-in helpers — no need to import pkg/sql/ast.
-	tree, err := gosqlx.ParseTree(ctx, "SELECT id, name FROM users WHERE active = true",
-		gosqlx.WithDialect("postgresql"))
+func testLex(query string) {
+	toks, err := parsing.Lex(query)
 	if err != nil {
-		// Sentinel errors work with errors.Is
-		if errors.Is(err, gosqlx.ErrSyntax) {
-			log.Fatalf("syntax error: %v", err)
-		}
-		log.Fatal(err)
+		fmt.Printf("error: %v\n", err)
 	}
-	fmt.Println("Tables:", tree.Tables())
-	fmt.Println(tree.Format(gosqlx.WithIndent(2), gosqlx.WithUppercaseKeywords(true)))
+	for i, tok := range toks {
+		fmt.Printf("token %d: %v\n", i+1, tok)
+	}
+}
 
-	// Walk the AST — typed walkers avoid the type-assertion dance:
-	tree.WalkSelects(func(s *ast.SelectStatement) bool {
-		fmt.Printf("  SELECT with %d columns\n", len(s.Columns))
-		return true
-	})
-
-	// The legacy Parse/Format/Validate API still works for v1.x code.
-	// See docs/MIGRATION.md for the Tree migration guide.
+func testParse(query string) {
+	statement, err := parsing.Parse(query)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+	}
+	fmt.Printf("AST: %v\n", statement)
 }
