@@ -4,9 +4,6 @@ import (
 	"fmt"
 )
 
-// QUESTION:
-// at what layer should we inject a "EOF" at the end of the text?
-// maybe, we add this to queryString in pre-processing. need to figure this out
 func lex(input string) ([]Token, error) {
 	cleanedQuery, err := cleanQuery(input)
 	if err != nil {
