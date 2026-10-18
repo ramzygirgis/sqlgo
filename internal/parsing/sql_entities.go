@@ -5,8 +5,17 @@ type Statement interface {
 	String() string // for testing
 }
 
+type sqlValue interface {
+	// getter?????
+	String() string
+}
+
 type Column struct {
-	name string
+	name       string
+	sqlType    string
+	contraints []string
+	hasDefault bool
+	defaultVal sqlValue // hmmmm, maybe actually use an interface?????????
 }
 
 func (c Column) GetName() string {
@@ -14,5 +23,6 @@ func (c Column) GetName() string {
 }
 
 type Table struct {
-	name string
+	name    string
+	columns []Column
 }

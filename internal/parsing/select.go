@@ -10,7 +10,7 @@ type SelectStatement struct {
 	all     bool
 }
 
-func (s *SelectStatement) statementMarket() {}
+func (s *SelectStatement) statementMarker() {}
 
 func (s *SelectStatement) String() string {
 	res := "SELECT"
