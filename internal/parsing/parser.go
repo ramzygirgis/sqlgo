@@ -68,11 +68,22 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		return nil, err
 	}
 	cols := make([]Column, 0)
-	for p.read().kind == Identifier {
-		col := Column{
-			name: p.next().body,
+	all := false
+	for p.read().kind == Identifier || p.read().kind == Star {
+		switch p.read().kind {
+		case Identifier:
+			col := Column{
+				name: p.next().body,
+			}
+			cols = append(cols, col)
+		case Star:
+			if _, err := p.expect(Star, "*"); err != nil {
+				return nil, fmt.Errorf("expected *, got %s %s", p.read().kind, p.read().body)
+			}
+			all = true
+		default:
+			return nil, fmt.Errorf("expected column name or *, got %s %s", p.read().kind, p.read().body)
 		}
-		cols = append(cols, col)
 	}
 
 	from, err := p.parseFrom()
@@ -87,18 +98,19 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	return &SelectStatement{
 		columns: cols,
 		from:    from,
+		all:     all,
 	}, nil
 }
 
-func (p *parser) parseFrom() (*FromStatement, error) {
+func (p *parser) parseFrom() (*FromKeyword, error) {
 	if _, err := p.expect(Keyword, "FROM"); err != nil {
-		return &FromStatement{}, err
+		return &FromKeyword{}, err
 	}
 	if p.read().kind != Identifier {
-		return &FromStatement{}, fmt.Errorf("expected table name identifier, got %v %s", p.read().kind, p.read().body)
+		return &FromKeyword{}, fmt.Errorf("expected table name identifier, got %v %s", p.read().kind, p.read().body)
 	}
 	table := p.next()
-	from := FromStatement{
+	from := FromKeyword{
 		table: Table{
 			name: table.body,
 		},

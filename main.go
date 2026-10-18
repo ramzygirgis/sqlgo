@@ -6,11 +6,16 @@ import (
 )
 
 func main() {
-	sqlQuery := `SELECT * FROM users;`
-	fmt.Printf("Lex Test:\n")
-	testLex(sqlQuery)
-	fmt.Printf("Parse Test:\n")
-	testParse(sqlQuery)
+	sqlQuery1 := `SELECT * FROM users;`
+	sqlQuery2 := `SELECT *, name FROM users;`
+	fmt.Printf("Lex Test 1:\n")
+	testLex(sqlQuery1)
+	fmt.Printf("Parse Test 2:\n")
+	testParse(sqlQuery1)
+	fmt.Printf("Lex Test 2:\n")
+	testLex(sqlQuery2)
+	fmt.Printf("Parse Test 2:\n")
+	testParse(sqlQuery2)
 }
 
 func testLex(query string) {
@@ -28,5 +33,5 @@ func testParse(query string) {
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
-	fmt.Printf("AST: %v\n", statement)
+	fmt.Printf("AST: %s\n", statement)
 }

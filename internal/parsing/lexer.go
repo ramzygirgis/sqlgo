@@ -20,7 +20,7 @@ func Lex(input string) ([]Token, error) {
 			toks = append(toks, Token{kind: Star, body: "*"})
 			i++
 		case c == ',':
-			toks = append(toks, Token{kind: Comma, body: ","})
+			// toks = append(toks, Token{kind: Comma, body: ","})
 			i++
 		case c == ';':
 			toks = append(toks, Token{kind: Semicolon, body: ";"})

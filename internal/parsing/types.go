@@ -39,6 +39,7 @@ func (t Token) String() string {
 
 type Statement interface {
 	statementMarker()
+	String() string // for testing
 }
 
 // columns (public)
@@ -59,15 +60,34 @@ type Table struct {
 
 // FROM keyword
 
-type FromStatement struct {
+type FromKeyword struct {
 	table Table
+}
+
+func (s *FromKeyword) String() string {
+	return fmt.Sprintf(" FROM %s", s.table.name)
 }
 
 // SELECT keyword/statement
 
 type SelectStatement struct {
 	columns []Column
-	from    *FromStatement
+	from    *FromKeyword
+	all     bool
 }
 
 func (s *SelectStatement) statementMarker() {}
+
+func (s *SelectStatement) String() string {
+	res := "SELECT"
+	if s.all {
+		res += " *,"
+	}
+	for _, col := range s.columns {
+		res += fmt.Sprintf(" %s,", col.name)
+	}
+	res = res[:len(res)-1]
+	res += s.from.String()
+	res += ";"
+	return res
+}
