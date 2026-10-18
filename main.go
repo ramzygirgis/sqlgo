@@ -8,14 +8,20 @@ import (
 func main() {
 	sqlQuery1 := `SELECT * FROM users;`
 	sqlQuery2 := `SELECT *, name FROM users;`
-	fmt.Printf("Lex Test 1:\n")
-	testLex(sqlQuery1)
-	fmt.Printf("Parse Test 2:\n")
-	testParse(sqlQuery1)
-	fmt.Printf("Lex Test 2:\n")
-	testLex(sqlQuery2)
-	fmt.Printf("Parse Test 2:\n")
-	testParse(sqlQuery2)
+	sqlQuery3 := `SELECT *, *, name FROM users;`
+	sqlQuery4 := `SELECT *,*, name  FROM     users, hi;`
+	queryStrings := []string{sqlQuery1, sqlQuery2, sqlQuery3, sqlQuery4}
+	runSuite(queryStrings)
+}
+
+func runSuite(queryStrings []string) {
+	for n, query := range queryStrings {
+		fmt.Printf("*************\nLex Test %d:\n**************\n", n+1)
+		testLex(query)
+		fmt.Printf("*************\nParse Test %d:\n**************\n", n+1)
+		testParse(query)
+
+	}
 }
 
 func testLex(query string) {
