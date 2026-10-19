@@ -12,11 +12,16 @@ func main() {
 		sqlQuery3 := `SELECT *, *, name FROM users;`
 		sqlQuery4 := `SELECT name FROM users;`
 	*/
-	sqlQuery5 := `CREATE TABLE users (
+	sqlQuery1 := `CREATE TABLE users (
 	name TEXT	
 	);`
+	sqlQuery2 := `CREATE TABLE users (
+		id INT NOT NULL PRIMARY KEY,
+		name TEXT NOT NULL,
+		city TEXT DEFAULT Toronto
+	);`
 	// queryStrings := []string{sqlQuery1, sqlQuery2, sqlQuery3, sqlQuery4, sqlQuery5}
-	queryStrings := []string{sqlQuery5}
+	queryStrings := []string{sqlQuery1, sqlQuery2}
 	runSuite(queryStrings)
 }
 
