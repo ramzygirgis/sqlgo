@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"fmt"
+	"strings"
 )
 
 type SelectStatement struct {
@@ -13,15 +14,22 @@ type SelectStatement struct {
 func (s *SelectStatement) statementMarker() {}
 
 func (s *SelectStatement) String() string {
-	res := "SELECT"
+	var sb strings.Builder
+	lastIndex := len(s.columns) - 1
+	sb.WriteString("SELECT")
 	if s.all {
-		res += " *,"
+		sb.WriteString(" *")
+		if lastIndex != -1 {
+			sb.WriteString(",")
+		}
 	}
-	for _, col := range s.columns {
-		res += fmt.Sprintf(" %s", col.name)
+	for i, col := range s.columns {
+		sb.WriteString(fmt.Sprintf(" %s", col.name))
+		if i != lastIndex {
+			sb.WriteString(",")
+		}
 	}
-	res = res[:len(res)-1]
-	res += s.from.String()
-	res += ";"
-	return res
+	sb.WriteString(s.from.String())
+	sb.WriteString(";")
+	return sb.String()
 }

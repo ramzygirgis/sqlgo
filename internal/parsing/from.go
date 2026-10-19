@@ -5,9 +5,9 @@ import (
 )
 
 type FromKeyword struct {
-	table Table
+	tableName string
 }
 
 func (s *FromKeyword) String() string {
-	return fmt.Sprintf(" FROM %s", s.table.name)
+	return fmt.Sprintf(" FROM %s", s.tableName)
 }

@@ -7,26 +7,29 @@ import (
 
 // CREATE TABLE is not the only create statement btw...
 
-type CreateStatement struct {
+type CreateTableStatement struct {
 	tableName   string // can also make it a table type
 	columns     []Column
 	ifNotExists bool
 }
 
-func (c *CreateStatement) statementMarker() {}
+func (c *CreateTableStatement) statementMarker() {}
 
-func (c *CreateStatement) String() string {
+func (c *CreateTableStatement) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("CREATE TABLE")
 	if c.ifNotExists {
 		sb.WriteString(" IF NOT EXISTS")
 	}
-	sb.WriteString(c.tableName + " (\n")
+	sb.WriteString(c.tableName)
+	sb.WriteString(" (\n")
 
 	for _, col := range c.columns {
 		constraintStr := ""
-		for constraint := range col.contraints { // chill to use string += string in loop b/c usually # contraints <= 3
+		for _, constraint := range col.contraints {
+			// chill to use string += string in loop b/c usually # contraints <= 3
+			// can optimize later
 			constraintStr += fmt.Sprintf(" %s", constraint)
 		}
 

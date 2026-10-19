@@ -15,9 +15,13 @@ func isKeyword(s string) bool {
 	keywordSet := make(map[string]struct{})
 	keywordSet["SELECT"] = struct{}{}
 	keywordSet["FROM"] = struct{}{}
+	keywordSet["CREATE"] = struct{}{}
+	keywordSet["TABLE"] = struct{}{}
 	_, ok := keywordSet[s]
 	return ok
 }
+
+// isContraint function????
 
 // this function strips a query of leading and trailing whitespace,
 // and converts ending ';' into EOF.

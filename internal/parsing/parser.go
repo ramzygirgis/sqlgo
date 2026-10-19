@@ -18,6 +18,7 @@ func (p *parser) peek() []Token {
 
 func (p *parser) read() Token {
 	if p.pos >= len(p.toks) || p.pos < 0 {
+		// maybe we can throw here
 		return Token{
 			kind: EOF,
 			body: "EOF",
@@ -43,6 +44,21 @@ func (p *parser) expect(k TokenKind, body string) (Token, error) {
 	return p.next(), nil
 }
 
+func (p *parser) expectKind(tk TokenKind) (string, error) {
+	if p.read().kind != tk {
+		return "", fmt.Errorf("unexpected token kind %s, got %s", tk, p.read().kind)
+	}
+	return p.next().body, nil
+}
+
+func (p *parser) expectKeyword(body string) error {
+	_, err := p.expectKind(Keyword)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *parser) parseStatement() (Statement, error) {
 	toks := p.peek()
 	if len(toks) == 0 {
@@ -61,6 +77,126 @@ func (p *parser) parseStatement() (Statement, error) {
 	default:
 		return nil, fmt.Errorf("expected query to begin with a statement")
 	}
+}
+
+func (p *parser) parseCreateTable() (*CreateTableStatement, error) {
+	ifNotExists := false
+	if _, err := p.expect(Keyword, "CREATE"); err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(Keyword, "TABLE"); err != nil {
+		return nil, err
+	}
+	if (p.read() == Token{
+		kind: Keyword,
+		body: "IF",
+	}) {
+		p.next()
+		if err := p.expectKeyword("NOT"); err != nil {
+			return nil, err
+		}
+		if err := p.expectKeyword("EXISTS"); err != nil {
+			return nil, err
+		}
+		ifNotExists = true
+	}
+	tableName, err := p.expectKind(Identifier)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(Keyword, "FROM"); err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(Identifier, "("); err != nil {
+		return nil, err
+	}
+	cols := make([]Column, 1)
+	col, err := p.parseColumnDef()
+	if err != nil {
+		return nil, err
+	}
+	cols = append(cols, col)
+	for (p.next() == Token{
+		kind: Comma,
+		body: ",",
+	}) {
+		col, err := p.parseColumnDef()
+		if err != nil {
+			return nil, err
+		}
+		cols = append(cols, col)
+	}
+	if _, err = p.expect(Identifier, ")"); err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(Semicolon, ";"); err != nil {
+		return nil, err
+	}
+	return &CreateTableStatement{
+		tableName:   tableName,
+		columns:     cols,
+		ifNotExists: ifNotExists,
+	}, err
+}
+
+func (p *parser) parseColumnDef() (Column, error) {
+	name, err := p.expectKind(Identifier)
+	nullable := true
+	primaryKey := false
+	hasDefault := false
+	defaultVal := ""
+	if err != nil {
+		return Column{}, err
+	}
+	sqlType, err := p.expectKind(Identifier)
+	if err != nil {
+		return Column{}, err
+	}
+	for p.read().kind != EOF { // find cleanest way to do this
+		switch p.read() {
+		case Token{
+			kind: Keyword,
+			body: "NOT",
+		}:
+			p.next()
+			err := p.expectKeyword("NULL")
+			if err != nil {
+				return Column{}, err
+			}
+			nullable = false
+		case Token{
+			kind: Keyword,
+			body: "PRIMARY",
+		}:
+			p.next()
+			err := p.expectKeyword("KEY")
+			if err != nil {
+				return Column{}, err
+			}
+			primaryKey = true
+		case Token{
+			kind: Keyword,
+			body: "DEFAULT",
+		}:
+			p.next()
+			body, err := p.expectKind(Identifier)
+			if err != nil {
+				return Column{}, err
+			}
+			hasDefault = true
+			defaultVal = body
+		default:
+			break
+		}
+	}
+	return Column{
+		name:       name,
+		sqlType:    sqlType,
+		hasDefault: hasDefault,
+		defaultVal: defaultVal,
+		nullable:   nullable,
+		primaryKey: primaryKey,
+	}, nil
 }
 
 func (p *parser) parseSelect() (*SelectStatement, error) {
@@ -111,11 +247,8 @@ func (p *parser) parseFrom() (*FromKeyword, error) {
 	}
 	table := p.next()
 	from := FromKeyword{
-		table: Table{
-			name: table.body,
-		},
+		tableName: table.body,
 	}
-
 	return &from, nil
 }
 

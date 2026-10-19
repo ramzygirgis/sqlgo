@@ -13,13 +13,10 @@ type sqlValue interface {
 type Column struct {
 	name       string
 	sqlType    string
-	contraints []string
 	hasDefault bool
-	defaultVal sqlValue // hmmmm, maybe actually use an interface?????????
-}
-
-func (c Column) GetName() string {
-	return c.name
+	defaultVal string
+	nullable   bool
+	primaryKey bool
 }
 
 type Table struct {
