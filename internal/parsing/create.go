@@ -27,10 +27,11 @@ func (c *CreateTableStatement) String() string {
 
 	for _, col := range c.columns {
 		constraintStr := ""
-		for _, constraint := range col.contraints {
-			// chill to use string += string in loop b/c usually # contraints <= 3
-			// can optimize later
-			constraintStr += fmt.Sprintf(" %s", constraint)
+		if !col.nullable {
+			constraintStr += " NOT NULL"
+		}
+		if col.primaryKey {
+			constraintStr += " PRIMARY KEY"
 		}
 
 		defaultStr := ""

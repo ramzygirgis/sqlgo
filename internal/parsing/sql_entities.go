@@ -5,11 +5,6 @@ type Statement interface {
 	String() string // for testing
 }
 
-type sqlValue interface {
-	// getter?????
-	String() string
-}
-
 type Column struct {
 	name       string
 	sqlType    string
