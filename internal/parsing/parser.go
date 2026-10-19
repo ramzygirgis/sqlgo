@@ -74,6 +74,20 @@ func (p *parser) parseStatement() (Statement, error) {
 			return nil, err
 		}
 		return selectStatementPtr, nil
+	case "CREATE":
+		if len(toks) == 1 {
+			return nil, fmt.Errorf("this query is ass")
+		}
+		switch toks[1].body {
+		case "TABLE":
+			createTableStatementPtr, err := p.parseCreateTable()
+			if err != nil {
+				return nil, err
+			}
+			return createTableStatementPtr, nil
+		default:
+			return nil, fmt.Errorf("expected CREATE keyword to be followed by another keyword.")
+		}
 	default:
 		return nil, fmt.Errorf("expected query to begin with a statement")
 	}

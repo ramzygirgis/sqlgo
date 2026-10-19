@@ -14,7 +14,7 @@ func Lex(input string) ([]Token, error) {
 	for i < len(cleanedQuery) {
 		c := cleanedQuery[i]
 		switch {
-		case c == ' ':
+		case c == ' ' || c == '\n' || c == '\t':
 			i++
 		case c == '*':
 			toks = append(toks, Token{kind: Star, body: "*"})
@@ -24,6 +24,12 @@ func Lex(input string) ([]Token, error) {
 			i++
 		case c == ';':
 			toks = append(toks, Token{kind: Semicolon, body: ";"})
+			i++
+		case c == '(':
+			toks = append(toks, Token{kind: Identifier, body: "("})
+			i++
+		case c == ')':
+			toks = append(toks, Token{kind: Identifier, body: ")"})
 			i++
 		case isValidChar(c):
 			start := i
