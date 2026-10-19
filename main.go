@@ -6,21 +6,45 @@ import (
 )
 
 func main() {
-	sqlQuery1 := `SELECT * FROM users;`
-	sqlQuery2 := `SELECT *, name FROM users;`
-	sqlQuery3 := `SELECT *, *, name FROM users;`
-	sqlQuery4 := `SELECT *,*, name  FROM     users, hi;`
-	queryStrings := []string{sqlQuery1, sqlQuery2, sqlQuery3, sqlQuery4}
+	/*
+		sqlQuery1 := `SELECT * FROM users;`
+		sqlQuery2 := `SELECT *, name FROM users;`
+		sqlQuery3 := `SELECT *, *, name FROM users;`
+		sqlQuery4 := `SELECT name FROM users;`
+	*/
+	sqlQuery5 := `CREATE TABLE users (
+	name TEXT	
+	);`
+	// queryStrings := []string{sqlQuery1, sqlQuery2, sqlQuery3, sqlQuery4, sqlQuery5}
+	queryStrings := []string{sqlQuery5}
 	runSuite(queryStrings)
 }
 
 func runSuite(queryStrings []string) {
-	for n, query := range queryStrings {
-		fmt.Printf("*************\nLex Test %d:\n**************\n", n+1)
-		testLex(query)
-		fmt.Printf("*************\nParse Test %d:\n**************\n", n+1)
-		testParse(query)
+	var lexTest string
+	var parseTest string
+	fmt.Print("Run lex tests? (y/n)\n")
+	// Scanln stops reading at a newline character
+	_, err := fmt.Scanln(&lexTest)
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return
+	}
+	fmt.Print("Run parse tests? (y/n)\n")
+	if _, err := fmt.Scanln(&parseTest); err != nil {
+		fmt.Println("Error reading input:", err)
+		return
+	}
 
+	for n, query := range queryStrings {
+		if lexTest == "y" || lexTest == "Y" {
+			fmt.Printf("\n*************\nLex Test %d:\n", n+1)
+			testLex(query)
+		}
+		if parseTest == "y" || parseTest == "Y" {
+			fmt.Printf("\n*************\nParse Test %d:\n", n+1)
+			testParse(query)
+		}
 	}
 }
 
@@ -28,6 +52,7 @@ func testLex(query string) {
 	toks, err := parsing.Lex(query)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
+		return
 	}
 	for i, tok := range toks {
 		fmt.Printf("token %d: %v\n", i+1, tok)
@@ -35,9 +60,11 @@ func testLex(query string) {
 }
 
 func testParse(query string) {
+	fmt.Printf("Your query: %s\n", query)
 	statement, err := parsing.Parse(query)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
+		return
 	}
-	fmt.Printf("AST: %s\n", statement)
+	fmt.Printf("Reconstructed query: %s\n", statement)
 }

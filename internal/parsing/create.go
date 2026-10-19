@@ -18,9 +18,9 @@ func (c *CreateTableStatement) statementMarker() {}
 func (c *CreateTableStatement) String() string {
 	var sb strings.Builder
 
-	sb.WriteString("CREATE TABLE")
+	sb.WriteString("CREATE TABLE ")
 	if c.ifNotExists {
-		sb.WriteString(" IF NOT EXISTS")
+		sb.WriteString("IF NOT EXISTS ")
 	}
 	sb.WriteString(c.tableName)
 	sb.WriteString(" (\n")
@@ -28,10 +28,10 @@ func (c *CreateTableStatement) String() string {
 	for _, col := range c.columns {
 		constraintStr := ""
 		if !col.nullable {
-			constraintStr += " NOT NULL"
+			constraintStr += "NOT NULL "
 		}
 		if col.primaryKey {
-			constraintStr += " PRIMARY KEY"
+			constraintStr += "PRIMARY KEY "
 		}
 
 		defaultStr := ""

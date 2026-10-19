@@ -52,9 +52,12 @@ func (p *parser) expectKind(tk TokenKind) (string, error) {
 }
 
 func (p *parser) expectKeyword(body string) error {
-	_, err := p.expectKind(Keyword)
+	b, err := p.expectKind(Keyword)
 	if err != nil {
 		return err
+	}
+	if b != body {
+		return fmt.Errorf("expected body %s, got %s.", body, b)
 	}
 	return nil
 }
@@ -118,22 +121,17 @@ func (p *parser) parseCreateTable() (*CreateTableStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := p.expect(Keyword, "FROM"); err != nil {
-		return nil, err
-	}
 	if _, err := p.expect(Identifier, "("); err != nil {
 		return nil, err
 	}
-	cols := make([]Column, 1)
+	var cols []Column
 	col, err := p.parseColumnDef()
 	if err != nil {
 		return nil, err
 	}
 	cols = append(cols, col)
-	for (p.next() == Token{
-		kind: Comma,
-		body: ",",
-	}) {
+	for p.read().kind == Comma {
+		p.next()
 		col, err := p.parseColumnDef()
 		if err != nil {
 			return nil, err
@@ -166,6 +164,7 @@ func (p *parser) parseColumnDef() (Column, error) {
 	if err != nil {
 		return Column{}, err
 	}
+constraints:
 	for p.read().kind != EOF { // find cleanest way to do this
 		switch p.read() {
 		case Token{
@@ -200,7 +199,7 @@ func (p *parser) parseColumnDef() (Column, error) {
 			hasDefault = true
 			defaultVal = body
 		default:
-			break
+			break constraints
 		}
 	}
 	return Column{
