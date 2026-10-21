@@ -38,7 +38,7 @@ func (c *CreateTableStatement) String() string {
 		if col.hasDefault {
 			defaultStr += fmt.Sprintf(" DEFAULT %s", col.defaultVal)
 		}
-		sb.WriteString(fmt.Sprintf("   %s %s%s%s,\n", col.name, col.sqlType, constraintStr, defaultStr))
+		sb.WriteString(fmt.Sprintf("   %s %s %s%s,\n", col.name, col.sqlType, constraintStr, defaultStr))
 	}
 	sb.WriteString(");")
 	return sb.String()

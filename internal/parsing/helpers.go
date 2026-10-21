@@ -17,7 +17,23 @@ func isKeyword(s string) bool {
 	keywordSet["FROM"] = struct{}{}
 	keywordSet["CREATE"] = struct{}{}
 	keywordSet["TABLE"] = struct{}{}
-	_, ok := keywordSet[s]
+	keywordSet["NOT"] = struct{}{}
+	keywordSet["IN"] = struct{}{}
+	keywordSet["PRIMARY"] = struct{}{}
+	keywordSet["NULL"] = struct{}{}
+	keywordSet["KEY"] = struct{}{}
+	keywordSet["DEFAULT"] = struct{}{}
+
+	_, ok := keywordSet[strings.ToUpper(s)]
+	return ok
+}
+
+func isType(s string) bool {
+	typeSet := make(map[string]struct{})
+	typeSet["TEXT"] = struct{}{}
+	typeSet["INT"] = struct{}{}
+
+	_, ok := typeSet[strings.ToUpper(s)]
 	return ok
 }
 

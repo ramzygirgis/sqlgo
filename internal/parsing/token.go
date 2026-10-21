@@ -11,13 +11,14 @@ const (
 	Identifier
 	Keyword
 	Comma
+	Type
 	Star
 	Semicolon
 	EOF
 )
 
 func (tk TokenKind) String() string {
-	strings := [...]string{"Illegal", "Identifier", "Keyword", "Comma", "Star", "Semicolon", "EOF"}
+	strings := [...]string{"Illegal", "Identifier", "Keyword", "Comma", "Type", "Star", "Semicolon", "EOF"}
 	if tk < 0 || int(tk) >= len(strings) {
 		return "TokenKind int out of range"
 	}

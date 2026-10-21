@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"fmt"
+	"strings"
 )
 
 func Lex(input string) ([]Token, error) {
@@ -20,7 +21,7 @@ func Lex(input string) ([]Token, error) {
 			toks = append(toks, Token{kind: Star, body: "*"})
 			i++
 		case c == ',':
-			// toks = append(toks, Token{kind: Comma, body: ","})
+			toks = append(toks, Token{kind: Comma, body: ","})
 			i++
 		case c == ';':
 			toks = append(toks, Token{kind: Semicolon, body: ";"})
@@ -38,7 +39,9 @@ func Lex(input string) ([]Token, error) {
 				if i == len(cleanedQuery) || !isValidChar(cleanedQuery[i]) {
 					body := cleanedQuery[start:i]
 					if isKeyword(body) {
-						toks = append(toks, Token{kind: Keyword, body: body})
+						toks = append(toks, Token{kind: Keyword, body: strings.ToUpper(body)})
+					} else if isType(body) {
+						toks = append(toks, Token{kind: Type, body: strings.ToUpper(body)})
 					} else {
 						toks = append(toks, Token{kind: Identifier, body: body})
 					}

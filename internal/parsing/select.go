@@ -6,16 +6,16 @@ import (
 )
 
 type SelectStatement struct {
-	columns []Column
-	from    *FromKeyword
-	all     bool
+	columnNames []string
+	from        *FromKeyword
+	all         bool
 }
 
 func (s *SelectStatement) statementMarker() {}
 
 func (s *SelectStatement) String() string {
 	var sb strings.Builder
-	lastIndex := len(s.columns) - 1
+	lastIndex := len(s.columnNames) - 1
 	sb.WriteString("SELECT")
 	if s.all {
 		sb.WriteString(" *")
@@ -23,8 +23,8 @@ func (s *SelectStatement) String() string {
 			sb.WriteString(",")
 		}
 	}
-	for i, col := range s.columns {
-		sb.WriteString(fmt.Sprintf(" %s", col.name))
+	for i, colName := range s.columnNames {
+		sb.WriteString(fmt.Sprintf(" %s", colName))
 		if i != lastIndex {
 			sb.WriteString(",")
 		}

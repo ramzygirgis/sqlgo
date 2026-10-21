@@ -39,14 +39,14 @@ func (p *parser) expect(k TokenKind, body string) (Token, error) {
 		body: body,
 	}
 	if p.read() != expected {
-		return Token{}, fmt.Errorf("unexpected %v %s, got %v %s", k, body, p.read().kind, p.read().body)
+		return Token{}, fmt.Errorf("expected %v %s, got %v %s", k, body, p.read().kind, p.read().body)
 	}
 	return p.next(), nil
 }
 
 func (p *parser) expectKind(tk TokenKind) (string, error) {
 	if p.read().kind != tk {
-		return "", fmt.Errorf("unexpected token kind %s, got %s", tk, p.read().kind)
+		return "", fmt.Errorf("expected token kind %s, got %s", tk, p.read().kind)
 	}
 	return p.next().body, nil
 }
@@ -160,7 +160,7 @@ func (p *parser) parseColumnDef() (Column, error) {
 	if err != nil {
 		return Column{}, err
 	}
-	sqlType, err := p.expectKind(Identifier)
+	sqlType, err := p.expectKind(Type)
 	if err != nil {
 		return Column{}, err
 	}
@@ -216,15 +216,18 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	if _, err := p.expect(Keyword, "SELECT"); err != nil {
 		return nil, err
 	}
-	cols := make([]Column, 0)
+	colNames := make([]string, 0)
 	all := false
-	for p.read().kind == Identifier || p.read().kind == Star {
+	for p.read().kind == Identifier || p.read().kind == Star || p.read().kind == Comma {
 		switch p.read().kind {
-		case Identifier:
-			col := Column{
-				name: p.next().body,
+		case Comma:
+			p.next()
+			if p.read().kind != Identifier && p.read().kind != Star {
+				return nil, fmt.Errorf("expected column name or * to follow comma, got %s %s.", p.read().kind, p.read().body)
 			}
-			cols = append(cols, col)
+		case Identifier:
+			colName := p.next().body
+			colNames = append(colNames, colName)
 		case Star:
 			if _, err := p.expect(Star, "*"); err != nil {
 				return nil, fmt.Errorf("expected *, got %s %s", p.read().kind, p.read().body)
@@ -234,7 +237,6 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 			return nil, fmt.Errorf("expected column name or *, got %s %s", p.read().kind, p.read().body)
 		}
 	}
-
 	from, err := p.parseFrom()
 	if err != nil {
 		return &SelectStatement{}, err
@@ -245,9 +247,9 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	}
 
 	return &SelectStatement{
-		columns: cols,
-		from:    from,
-		all:     all,
+		columnNames: colNames,
+		from:        from,
+		all:         all,
 	}, nil
 }
 
