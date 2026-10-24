@@ -8,7 +8,7 @@ import (
 
 func isValidChar(b byte) bool {
 	r := rune(b)
-	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_'
+	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' || r == '\''
 }
 
 func isKeyword(s string) bool {
@@ -33,6 +33,7 @@ func isKeyword(s string) bool {
 	return ok
 }
 
+/*
 func isComparator(s string) bool {
 	comparatorSet := make(map[string]struct{})
 	comparatorSet["="] = struct{}{}
@@ -47,6 +48,7 @@ func isComparator(s string) bool {
 	_, ok := comparatorSet[strings.ToUpper(s)]
 	return ok
 }
+*/
 
 func isType(s string) bool {
 	typeSet := make(map[string]struct{})

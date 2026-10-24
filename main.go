@@ -23,9 +23,15 @@ func main() {
 		name TEXT NOT NULL,
 		city TEXT DEFAULT Toronto
 	);` */
-	sqlQuery := []string{`SELECT name, * from users;`, `SELECT name, hello, *, * from users;`, `SELECT * frOm users;`}
+	// sqlQuery := []string{`SELECT name, * from users;`, `SELECT name, hello, *, * from users;`, `SELECT * frOm users;`}
 	// sqlQuery := []string{sqlQuery2}
-	runSuite(sqlQuery)
+	// runSuite(sqlQuery)
+
+	sqlQuery2 := []string{
+		`SELECT name from users WHERE a='hello';`,
+		`SELECT * from users WHERE a='helloooo' AND b <> yooo OR c <= 'hi';`,
+	}
+	runSuite(sqlQuery2)
 }
 
 func runSuite(queryStrings []string) {
