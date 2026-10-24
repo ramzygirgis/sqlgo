@@ -9,7 +9,7 @@ import (
 
 func isValidChar(b byte) bool {
 	r := rune(b)
-	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' || r == '\''
+	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' || r == '\'' || r == '.' || r == '_'
 }
 
 func unpackParameter(s string) (*Parameter, error) {
@@ -24,6 +24,11 @@ func unpackParameter(s string) (*Parameter, error) {
 		return nil, fmt.Errorf("cannot cast %s to int", s[1:])
 	}
 	return &Parameter{index: num}, nil
+}
+
+func isNumber(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
 }
 
 func isKeyword(s string) bool {

@@ -331,11 +331,10 @@ func (p *parser) parseComparison() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	op, err := p.expectKind(Comparator)
-	if err != nil {
-		return nil, err
+	if p.read().kind != Comparator {
+		return left, nil
 	}
+	op := p.next().body
 
 	right, err := p.parseOperand()
 	if err != nil {
@@ -358,7 +357,7 @@ func (p *parser) parseOperand() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &node, nil
+		return node, nil
 	case LParen:
 		p.next()
 		node, err := p.parseExpr()

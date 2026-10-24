@@ -27,8 +27,15 @@ func Lex(input string) ([]Token, error) {
 			for {
 				i++
 				if i == len(cleanedQuery) || !isValidChar(cleanedQuery[i]) {
+					// TODO: ONLY numbers can have a period in them (for now). need to enforce. _ at front is only for identifiers (not sure if need this)
 					body := cleanedQuery[start:i]
-					if isKeyword(body) {
+					if strings.HasPrefix(body, "$") {
+						toks = append(toks, Token{kind: Param, body: body})
+					} else if strings.HasPrefix(body, "'") && strings.HasSuffix(body, "'") {
+						toks = append(toks, Token{kind: String, body: body})
+					} else if isNumber(body) {
+						toks = append(toks, Token{kind: Number, body: body})
+					} else if isKeyword(body) {
 						toks = append(toks, Token{kind: Keyword, body: strings.ToUpper(body)})
 					} else if isType(body) {
 						toks = append(toks, Token{kind: Type, body: strings.ToUpper(body)})

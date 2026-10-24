@@ -29,7 +29,7 @@ func main() {
 
 	sqlQuery2 := []string{
 		`SELECT name from users WHERE a='hello';`,
-		`SELECT * from users WHERE a='helloooo' AND b <> yooo OR c <= 'hi';`,
+		`SELECT * from users WHERE a='helloooo' AND b <> 5.3 OR c <= 'hi';`,
 	}
 	runSuite(sqlQuery2)
 }
