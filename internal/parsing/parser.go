@@ -62,6 +62,15 @@ func (p *parser) expectKeyword(body string) error {
 	return nil
 }
 
+func (p *parser) acceptKeyword(body string) bool {
+	tok := p.read()
+	if tok.kind != Keyword || tok.body != body {
+		return false
+	}
+	p.next()
+	return true
+}
+
 func (p *parser) parseStatement() (Statement, error) {
 	toks := p.peek()
 	if len(toks) == 0 {
@@ -121,7 +130,7 @@ func (p *parser) parseCreateTable() (*CreateTableStatement, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := p.expect(Identifier, "("); err != nil {
+	if _, err := p.expect(LParen, "("); err != nil {
 		return nil, err
 	}
 	var cols []Column
@@ -138,7 +147,7 @@ func (p *parser) parseCreateTable() (*CreateTableStatement, error) {
 		}
 		cols = append(cols, col)
 	}
-	if _, err = p.expect(Identifier, ")"); err != nil {
+	if _, err = p.expect(RParen, ")"); err != nil {
 		return nil, err
 	}
 	if _, err := p.expect(Semicolon, ";"); err != nil {
@@ -216,6 +225,7 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	if _, err := p.expect(Keyword, "SELECT"); err != nil {
 		return nil, err
 	}
+	var where Expr = nil
 	colNames := make([]string, 0)
 	all := false
 	for p.read().kind == Identifier || p.read().kind == Star || p.read().kind == Comma {
@@ -242,6 +252,13 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		return &SelectStatement{}, err
 	}
 
+	if p.acceptKeyword("WHERE") {
+		where, err = p.parseExpr()
+		if err != nil {
+			return &SelectStatement{}, err
+		}
+	}
+
 	if err := p.parseEnd(); err != nil {
 		return &SelectStatement{}, err
 	}
@@ -250,6 +267,7 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		columnNames: colNames,
 		from:        from,
 		all:         all,
+		where:       where,
 	}, nil
 }
 
@@ -272,4 +290,87 @@ func (p *parser) parseEnd() error {
 		return err
 	}
 	return nil
+}
+
+func (p *parser) parseExpr() (Expr, error) {
+	return p.parseOrExpr()
+}
+
+func (p *parser) parseOrExpr() (Expr, error) {
+	left, err := p.parseAndExpr()
+	if err != nil {
+		return nil, err
+	}
+	for p.acceptKeyword("OR") {
+		right, err := p.parseAndExpr()
+		if err != nil {
+			return nil, err
+		}
+		left = &BinaryExpr{op: "OR", left: left, right: right}
+	}
+	return left, nil
+}
+
+func (p *parser) parseAndExpr() (Expr, error) {
+	left, err := p.parseComparison()
+	if err != nil {
+		return nil, err
+	}
+	for p.acceptKeyword("AND") {
+		right, err := p.parseComparison()
+		if err != nil {
+			return nil, err
+		}
+		left = &BinaryExpr{op: "AND", left: left, right: right}
+	}
+	return left, nil
+}
+
+func (p *parser) parseComparison() (Expr, error) {
+	left, err := p.parseOperand()
+	if err != nil {
+		return nil, err
+	}
+
+	op, err := p.expectKind(Comparator)
+	if err != nil {
+		return nil, err
+	}
+
+	right, err := p.parseOperand()
+	if err != nil {
+		return nil, err
+	}
+
+	return &BinaryExpr{op: op, left: left, right: right}, nil
+}
+
+func (p *parser) parseOperand() (Expr, error) {
+	switch p.read().kind {
+	case Identifier:
+		return &ColumnRef{p.next().body}, nil
+	case String:
+		return &Literal{p.next().body}, nil
+	case Number:
+		return &Literal{p.next().body}, nil
+	case Param:
+		node, err := unpackParameter(p.next().body)
+		if err != nil {
+			return nil, err
+		}
+		return &node, nil
+	case LParen:
+		p.next()
+		node, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		_, err = p.expectKind(RParen)
+		if err != nil {
+			return nil, err
+		}
+		return node, nil
+	default:
+		return nil, fmt.Errorf("Expected Identifier, String, Number, Parameter or (, got %s %s", p.read().kind, p.read().body)
+	}
 }

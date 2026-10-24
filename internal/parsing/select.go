@@ -8,6 +8,7 @@ import (
 type SelectStatement struct {
 	columnNames []string
 	from        *FromKeyword
+	where       Expr
 	all         bool
 }
 

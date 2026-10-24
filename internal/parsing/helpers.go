@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -9,6 +10,20 @@ import (
 func isValidChar(b byte) bool {
 	r := rune(b)
 	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' || r == '\''
+}
+
+func unpackParameter(s string) (*Parameter, error) {
+	if len(s) == 0 {
+		return nil, fmt.Errorf("expected first character of parameter to be $, got an empty string")
+	}
+	if s[0] != '$' {
+		return nil, fmt.Errorf("expected first character of parameter to be $, got %s", string(s[0]))
+	}
+	num, err := strconv.Atoi(s[1:])
+	if err != nil {
+		return nil, fmt.Errorf("cannot cast %s to int", s[1:])
+	}
+	return &Parameter{index: num}, nil
 }
 
 func isKeyword(s string) bool {

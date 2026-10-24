@@ -1,18 +1,17 @@
 package parsing
 
-type booleanExpression interface {
-	evaluate()
+import (
+	"fmt"
+)
+
+type BinaryExpr struct {
+	op    string
+	left  Expr
+	right Expr
 }
 
-type whereCondition struct {
-}
+func (b *BinaryExpr) expressionMarker() {}
 
-// idea:
-/*
-* where
-* col1
-* binOp
-*
-*
-*
- */
+func (b *BinaryExpr) String() string {
+	return fmt.Sprintf("%s %s %s", b.left.String(), b.op, b.right.String())
+}

@@ -11,6 +11,9 @@ const (
 	Identifier
 	Keyword
 	Comma
+	Number
+	String
+	Param
 	Type
 	Comparator
 	LParen
@@ -22,8 +25,9 @@ const (
 
 func (tk TokenKind) String() string {
 	strings := [...]string{"Illegal", "Identifier", "Keyword",
-		"Comma", "Type", "Comparator", "LParen",
-		"RParen", "Star", "Semicolon", "EOF",
+		"Comma", "Number", "String", "Param", "Type",
+		"Comparator", "LParen", "RParen", "Star",
+		"Semicolon", "EOF",
 	}
 	if tk < 0 || int(tk) >= len(strings) {
 		return "TokenKind int out of range"
