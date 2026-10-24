@@ -13,24 +13,14 @@ func Lex(input string) ([]Token, error) {
 	var toks []Token
 	i := 0
 	for i < len(cleanedQuery) {
+		if tok, ok := matchPunct(cleanedQuery, i); ok {
+			toks = append(toks, tok)
+			i += len(tok.body)
+			continue
+		}
 		c := cleanedQuery[i]
 		switch {
 		case c == ' ' || c == '\n' || c == '\t':
-			i++
-		case c == '*':
-			toks = append(toks, Token{kind: Star, body: "*"})
-			i++
-		case c == ',':
-			toks = append(toks, Token{kind: Comma, body: ","})
-			i++
-		case c == ';':
-			toks = append(toks, Token{kind: Semicolon, body: ";"})
-			i++
-		case c == '(':
-			toks = append(toks, Token{kind: Identifier, body: "("})
-			i++
-		case c == ')':
-			toks = append(toks, Token{kind: Identifier, body: ")"})
 			i++
 		case isValidChar(c):
 			start := i
