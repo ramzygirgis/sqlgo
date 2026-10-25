@@ -40,7 +40,7 @@ func (p *parser) expect(k lexing.TokenKind, body string) (lexing.Token, error) {
 		Body: body,
 	}
 	if p.read() != expected {
-		return lexing.Token{}, fmt.Errorf("expected %v %s, got %v %s", k, body, p.read().kind, p.read().body)
+		return lexing.Token{}, fmt.Errorf("expected %v %s, got %v %s", k, body, p.read().Kind, p.read().Body)
 	}
 	return p.next(), nil
 }

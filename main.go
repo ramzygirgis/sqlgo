@@ -1,37 +1,25 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"github.com/ramzygirgis/sqlgo/internal/lexing"
 	"github.com/ramzygirgis/sqlgo/internal/parsing"
+	"os"
+	"strings"
 )
 
-/*
 func main() {
-	sqlQuery3 := `SELECT *, *, name FROM users;`
-	sqlQuery4 := `SELECT name FROM users;`
-	sqlQuery1 := `CREATE TABLE users (
-	name TEXT
-	);`
-	queryStrings := []string{sqlQuery1, sqlQuery2, sqlQuery3, sqlQuery4}
-	runSuite(queryStrings)
-}
-*/
-
-func main() {
-	/*	sqlQuery2 := `CREATE TABLE users (
-		id INT NOT NULL PRIMARY KEY,
-		name TEXT NOT NULL,
-		city TEXT DEFAULT Toronto
-	);` */
-	// sqlQuery := []string{`SELECT name, * from users;`, `SELECT name, hello, *, * from users;`, `SELECT * frOm users;`}
-	// sqlQuery := []string{sqlQuery2}
-	// runSuite(sqlQuery)
-
-	sqlQuery2 := []string{
-		`SELECT name from users WHERE a='hello';`,
-		`SELECT * from users WHERE a='helloooo' AND b <> 5.3 OR c <= 'hi';`,
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("What query do u wanna test?")
+	query, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading query input:", err)
+		return
 	}
-	runSuite(sqlQuery2)
+	query = strings.TrimSpace(query)
+	queryStrings := []string{query}
+	runSuite(queryStrings)
 }
 
 func runSuite(queryStrings []string) {
@@ -63,7 +51,7 @@ func runSuite(queryStrings []string) {
 }
 
 func testLex(query string) {
-	toks, err := parsing.Lex(query)
+	toks, err := lexing.Lex(query)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 		return

@@ -107,7 +107,7 @@ func (p *parser) parseFrom() (*FromKeyword, error) {
 		return &FromKeyword{}, err
 	}
 	if p.read().Kind != lexing.Identifier {
-		return &FromKeyword{}, fmt.Errorf("expected table name identifier, got %v %s", p.read().Kind, p.read().body)
+		return &FromKeyword{}, fmt.Errorf("expected table name identifier, got %v %s", p.read().Kind, p.read().Body)
 	}
 	table := p.next()
 	from := FromKeyword{
