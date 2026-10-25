@@ -90,6 +90,9 @@ func (p *parser) parseEnd() error {
 
 func Parse(query string) (Statement, error) {
 	toks, err := lexing.Lex(query)
+	if err != nil {
+		return nil, err
+	}
 	p := parser{
 		toks: toks,
 		pos:  0,
