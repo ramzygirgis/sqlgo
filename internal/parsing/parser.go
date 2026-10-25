@@ -73,23 +73,11 @@ func (p *parser) acceptKeyword(body string) bool {
 
 func (p *parser) acceptComma() bool {
 	tok := p.read()
-	if tok.kind != Comma || tok.body != ";" {
+	if tok.kind != Comma || tok.body != "," {
 		return false
 	}
 	p.next()
 	return true
-}
-
-func (p *parser) Parse() (Statement, error) {
-	s, err := p.parseStatement()
-	if err != nil {
-		return nil, err
-	}
-	_, err = p.expectKind(EOF)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
 }
 
 func (p *parser) parseStatement() (Statement, error) {

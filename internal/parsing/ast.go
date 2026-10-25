@@ -10,5 +10,9 @@ func Parse(query string) (Statement, error) {
 	if err != nil {
 		return nil, err
 	}
+	_, err = p.expectKind(EOF)
+	if err != nil {
+		return nil, err
+	}
 	return statement, nil
 }

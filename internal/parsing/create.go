@@ -1,14 +1,9 @@
 package parsing
 
-import (
-	"fmt"
-	"strings"
-)
-
-// CREATE TABLE is not the only create statement btw...
+import "strings"
 
 type CreateTableStatement struct {
-	tableName   string // can also make it a table type
+	tableName   string
 	columns     []Column
 	ifNotExists bool
 }
@@ -25,21 +20,26 @@ func (c *CreateTableStatement) String() string {
 	sb.WriteString(c.tableName)
 	sb.WriteString(" (\n")
 
-	for _, col := range c.columns {
-		constraintStr := ""
-		if !col.nullable {
-			constraintStr += "NOT NULL "
-		}
-		if col.primaryKey {
-			constraintStr += "PRIMARY KEY "
-		}
-
-		defaultStr := ""
-		if col.hasDefault {
-			defaultStr += fmt.Sprintf(" DEFAULT %s", col.defaultVal)
-		}
-		sb.WriteString(fmt.Sprintf("   %s %s %s%s,\n", col.name, col.sqlType, constraintStr, defaultStr))
+	colStrs := make([]string, len(c.columns))
+	for i, col := range c.columns {
+		colStrs[i] = "   " + col.String()
 	}
-	sb.WriteString(");")
+	sb.WriteString(strings.Join(colStrs, ",\n"))
+
+	sb.WriteString("\n);")
 	return sb.String()
+}
+
+func (col Column) String() string {
+	parts := []string{col.name, col.sqlType}
+	if !col.nullable {
+		parts = append(parts, "NOT NULL")
+	}
+	if col.primaryKey {
+		parts = append(parts, "PRIMARY KEY")
+	}
+	if col.hasDefault {
+		parts = append(parts, "DEFAULT "+col.defaultVal)
+	}
+	return strings.Join(parts, " ")
 }
