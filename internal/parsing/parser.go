@@ -18,7 +18,7 @@ func (p *parser) peek() []Token {
 
 func (p *parser) read() Token {
 	if p.pos >= len(p.toks) || p.pos < 0 {
-		// maybe we can throw here
+		// maybe we should treat this as an error
 		return Token{
 			kind: EOF,
 			body: "EOF",

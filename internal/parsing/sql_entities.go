@@ -11,7 +11,7 @@ type Statement interface {
 
 type Expr interface {
 	expressionMarker()
-	String() string
+	String() string // also for testing
 }
 
 type Column struct {
