@@ -2,7 +2,7 @@
 
 Generate type-safe Go code from raw SQL, in the spirit of [sqlc](https://github.com/sqlc-dev/sqlc).
 
-You rip raw SQL; sqlgo reads your schema and generates go functions with typed parameters and result structs. All the type inference and mapping happens statically, so there's no reflection or ORM overhead at runtime.
+You rip raw SQL, then sqlgo reads your schema and generates go functions with typed parameters and result structs. All the type inference and mapping happens statically, so there's no reflection or ORM overhead at runtime.
 
 > **Status:** ongoing. The lexer and parser work for the supported SQL listed below. Schema replay and code generation are in progress.
 
