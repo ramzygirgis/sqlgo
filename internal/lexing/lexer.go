@@ -1,4 +1,4 @@
-package parsing
+package lexing
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ func Lex(input string) ([]Token, error) {
 	for i < len(input) {
 		if tok, ok := matchPunct(input, i); ok {
 			toks = append(toks, tok)
-			i += len(tok.body)
+			i += len(tok.Body)
 			continue
 		}
 		b := input[i]
@@ -51,7 +51,7 @@ func Lex(input string) ([]Token, error) {
 			return []Token{}, fmt.Errorf("unexpected character %q at position %d", b, i)
 		}
 	}
-	toks = append(toks, Token{kind: EOF, body: "EOF"})
+	toks = append(toks, Token{Kind: EOF, Body: "EOF"})
 	return toks, nil
 }
 
@@ -63,7 +63,7 @@ func lexStringLiteral(input string, start int) (Token, int, error) {
 				i += 2
 				continue
 			}
-			return Token{kind: String, body: input[start : i+1]}, i + 1, nil
+			return Token{Kind: String, Body: input[start : i+1]}, i + 1, nil
 		}
 		i++
 	}
@@ -88,7 +88,7 @@ func lexNumber(input string, start int) (Token, int, error) {
 	if i < len(input) && isWordStart(input[i]) {
 		return Token{}, 0, fmt.Errorf("invalid number at position %d: unexpected %q", start, input[i])
 	}
-	return Token{kind: Number, body: input[start:i]}, i, nil
+	return Token{Kind: Number, Body: input[start:i]}, i, nil
 }
 
 func lexParam(input string, start int) (Token, int, error) {
@@ -102,7 +102,7 @@ func lexParam(input string, start int) (Token, int, error) {
 	if i < len(input) && isWordStart(input[i]) {
 		return Token{}, 0, fmt.Errorf("invalid parameter at position %d: unexpected %q", start, input[i])
 	}
-	return Token{kind: Param, body: input[start:i]}, i, nil
+	return Token{Kind: Param, Body: input[start:i]}, i, nil
 }
 
 func lexWord(input string, start int) (Token, int, error) {
@@ -119,10 +119,10 @@ func lexWord(input string, start int) (Token, int, error) {
 	body := input[start:i]
 	switch {
 	case isKeyword(body):
-		return Token{kind: Keyword, body: strings.ToUpper(body)}, i, nil
+		return Token{Kind: Keyword, Body: strings.ToUpper(body)}, i, nil
 	case isType(body):
-		return Token{kind: Type, body: strings.ToUpper(body)}, i, nil
+		return Token{Kind: Type, Body: strings.ToUpper(body)}, i, nil
 	default:
-		return Token{kind: Identifier, body: body}, i, nil
+		return Token{Kind: Identifier, Body: body}, i, nil
 	}
 }

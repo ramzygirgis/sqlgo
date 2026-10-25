@@ -1,4 +1,4 @@
-package parsing
+package lexing
 
 import (
 	"strings"
@@ -16,7 +16,7 @@ var punctuation = []struct {
 func matchPunct(input string, i int) (Token, bool) {
 	for _, p := range punctuation {
 		if strings.HasPrefix(input[i:], p.text) {
-			return Token{kind: p.kind, body: p.text}, true
+			return Token{Kind: p.kind, Body: p.text}, true
 		}
 	}
 	return Token{}, false

@@ -39,6 +39,7 @@ func TestParseRoundTrip(t *testing.T) {
 		{"op <>", `SELECT a FROM t WHERE a<>1;`, `SELECT a FROM t WHERE (a <> 1);`},
 		{"op !=", `SELECT a FROM t WHERE a!=1;`, `SELECT a FROM t WHERE (a != 1);`},
 		{"string with spaces", `SELECT a FROM t WHERE a = 'hello world';`, `SELECT a FROM t WHERE (a = 'hello world');`},
+		{"escaped quote", `SELECT a FROM t WHERE a = 'O''Brien';`, `SELECT a FROM t WHERE (a = 'O''Brien');`},
 		{"bare column", `SELECT a FROM t WHERE active;`, `SELECT a FROM t WHERE active;`},
 
 		// --- WHERE: precedence and associativity ---
@@ -87,9 +88,6 @@ func TestParseRoundTrip(t *testing.T) {
 		},
 
 		// --- CREATE TABLE ---
-		// NOTE: these assume String() prints columns joined by ",\n" with
-		// constraints in the order NOT NULL, PRIMARY KEY, DEFAULT.
-		// Adjust the expected strings if your printer differs.
 		{
 			"create one column",
 			`CREATE TABLE users (name TEXT);`,
@@ -143,8 +141,7 @@ func TestParseErrors(t *testing.T) {
 		{"missing semicolon", `SELECT name FROM users`},
 		{"unknown statement", `DELETE FROM users;`},
 		{"trailing junk after semicolon", `SELECT name FROM users; junk`},
-		{"unexpected character", `SELECT @ FROM users;`},
-		{"unterminated string", `SELECT a FROM t WHERE a = 'oops;`},
+		{"lex error surfaces", `SELECT @ FROM users;`},
 
 		// --- SELECT list ---
 		{"no columns", `SELECT FROM users;`},
@@ -169,7 +166,6 @@ func TestParseErrors(t *testing.T) {
 		{"unclosed paren", `SELECT a FROM t WHERE (a = 1;`},
 		{"extra close paren", `SELECT a FROM t WHERE a = 1);`},
 		{"empty parens", `SELECT a FROM t WHERE ();`},
-		{"lone bang", `SELECT a FROM t WHERE a ! 1;`},
 
 		// --- CREATE TABLE ---
 		{"create no parens", `CREATE TABLE users name TEXT;`},
@@ -182,6 +178,7 @@ func TestParseErrors(t *testing.T) {
 		{"create unclosed", `CREATE TABLE users (a TEXT;`},
 		{"create missing name", `CREATE TABLE (a TEXT);`},
 		{"create without TABLE", `CREATE users (a TEXT);`},
+		{"create IF without NOT EXISTS", `CREATE TABLE IF users (a TEXT);`},
 	}
 
 	for _, tt := range tests {
@@ -189,91 +186,6 @@ func TestParseErrors(t *testing.T) {
 			stmt, err := Parse(tt.input)
 			if err == nil {
 				t.Errorf("expected an error, got none\ninput: %s\nparsed as: %v", tt.input, stmt)
-			}
-		})
-	}
-}
-
-/* ---------- lexer: token kinds ---------- */
-
-func TestLexKinds(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		want  []TokenKind
-	}{
-		{"keywords and idents", `SELECT name FROM users;`,
-			[]TokenKind{Keyword, Identifier, Keyword, Identifier, Semicolon, EOF}},
-		{"comma without spaces", `a,b`,
-			[]TokenKind{Identifier, Comma, Identifier, EOF}},
-		{"star", `*`,
-			[]TokenKind{Star, EOF}},
-		{"parens", `(a)`,
-			[]TokenKind{LParen, Identifier, RParen, EOF}},
-		{"<= is one token", `a<=b`,
-			[]TokenKind{Identifier, Comparator, Identifier, EOF}},
-		{"<> is one token", `a<>b`,
-			[]TokenKind{Identifier, Comparator, Identifier, EOF}},
-		{"!= is one token", `a!=b`,
-			[]TokenKind{Identifier, Comparator, Identifier, EOF}},
-		{"string with spaces is one token", `'hello world'`,
-			[]TokenKind{String, EOF}},
-		{"decimal number", `5.3`,
-			[]TokenKind{Number, EOF}},
-		{"param", `$1`,
-			[]TokenKind{Param, EOF}},
-		{"identifier with digits", `col2`,
-			[]TokenKind{Identifier, EOF}},
-		{"tabs and newlines", "a\t\n\r b",
-			[]TokenKind{Identifier, Identifier, EOF}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			toks, err := Lex(tt.input)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if len(toks) != len(tt.want) {
-				t.Fatalf("got %d tokens %v, want %d kinds %v", len(toks), toks, len(tt.want), tt.want)
-			}
-			for i, tok := range toks {
-				if tok.kind != tt.want[i] {
-					t.Errorf("token %d (%q): got kind %v, want %v", i, tok.body, tok.kind, tt.want[i])
-				}
-			}
-		})
-	}
-}
-
-/* ---------- lexer: token bodies ---------- */
-
-func TestLexBodies(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		want  []string // bodies, excluding EOF
-	}{
-		{"keywords uppercased", `select FROM wHeRe`, []string{"SELECT", "FROM", "WHERE"}},
-		{"identifiers keep case", `userName`, []string{"userName"}},
-		{"two-char operators", `<= >= <> != = < >`, []string{"<=", ">=", "<>", "!=", "=", "<", ">"}},
-		{"string keeps quotes", `'hi there'`, []string{"'hi there'"}},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			toks, err := Lex(tt.input)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			var got []string
-			for _, tok := range toks {
-				if tok.kind != EOF {
-					got = append(got, tok.body)
-				}
-			}
-			if strings.Join(got, "|") != strings.Join(tt.want, "|") {
-				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
 	}

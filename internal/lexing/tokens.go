@@ -1,4 +1,4 @@
-package parsing
+package lexing
 
 import (
 	"fmt"
@@ -36,10 +36,10 @@ func (tk TokenKind) String() string {
 }
 
 type Token struct {
-	kind TokenKind
-	body string
+	Kind TokenKind
+	Body string
 }
 
 func (t Token) String() string {
-	return fmt.Sprintf("Token{\n   kind: %s\n   body: %s\n}", t.kind, t.body)
+	return fmt.Sprintf("Token{\n   kind: %s\n   body: %s\n}", t.Kind, t.Body)
 }
