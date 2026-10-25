@@ -4,12 +4,18 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
-func isValidChar(b byte) bool {
-	r := rune(b)
-	return unicode.IsLetter(r) || unicode.IsNumber(r) || r == '_' || r == '\'' || r == '.' || r == '_'
+func isWordStart(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || b == '_'
+}
+
+func isDigit(b byte) bool {
+	return b >= '0' && b <= '9'
+}
+
+func isWordChar(b byte) bool {
+	return isWordStart(b) || isDigit(b)
 }
 
 func unpackParameter(s string) (*Parameter, error) {
@@ -26,17 +32,15 @@ func unpackParameter(s string) (*Parameter, error) {
 	return &Parameter{index: num}, nil
 }
 
-func isNumber(s string) bool {
-	_, err := strconv.ParseFloat(s, 64)
-	return err == nil
-}
-
 func isKeyword(s string) bool {
 	keywordSet := make(map[string]struct{})
 	keywordSet["SELECT"] = struct{}{}
 	keywordSet["FROM"] = struct{}{}
 	keywordSet["CREATE"] = struct{}{}
 	keywordSet["TABLE"] = struct{}{}
+	keywordSet["IF"] = struct{}{}
+	keywordSet["NOT"] = struct{}{}
+	keywordSet["EXISTS"] = struct{}{}
 	keywordSet["NOT"] = struct{}{}
 	keywordSet["IN"] = struct{}{}
 	keywordSet["PRIMARY"] = struct{}{}
@@ -77,20 +81,4 @@ func isType(s string) bool {
 
 	_, ok := typeSet[strings.ToUpper(s)]
 	return ok
-}
-
-// isContraint function????
-
-// this function strips a query of leading and trailing whitespace,
-// and converts ending ';' into EOF.
-func cleanQuery(queryString string) (string, error) {
-	cleanedQuery := strings.TrimSpace(queryString)
-	length := len(cleanedQuery)
-	if length == 0 {
-		return "", fmt.Errorf("query is empty")
-	}
-	if cleanedQuery[length-1] != ';' {
-		return "", fmt.Errorf("query does not contain a terminator")
-	}
-	return cleanedQuery, nil
 }

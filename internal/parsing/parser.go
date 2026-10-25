@@ -71,6 +71,27 @@ func (p *parser) acceptKeyword(body string) bool {
 	return true
 }
 
+func (p *parser) acceptComma() bool {
+	tok := p.read()
+	if tok.kind != Comma || tok.body != ";" {
+		return false
+	}
+	p.next()
+	return true
+}
+
+func (p *parser) Parse() (Statement, error) {
+	s, err := p.parseStatement()
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.expectKind(EOF)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
 func (p *parser) parseStatement() (Statement, error) {
 	toks := p.peek()
 	if len(toks) == 0 {
@@ -228,25 +249,29 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	var where Expr = nil
 	colNames := make([]string, 0)
 	all := false
-	for p.read().kind == Identifier || p.read().kind == Star || p.read().kind == Comma {
-		switch p.read().kind {
-		case Comma:
-			p.next()
-			if p.read().kind != Identifier && p.read().kind != Star {
-				return nil, fmt.Errorf("expected column name or * to follow comma, got %s %s.", p.read().kind, p.read().body)
-			}
-		case Identifier:
-			colName := p.next().body
-			colNames = append(colNames, colName)
-		case Star:
-			if _, err := p.expect(Star, "*"); err != nil {
-				return nil, fmt.Errorf("expected *, got %s %s", p.read().kind, p.read().body)
-			}
+
+	colName, isStar, err := p.parseColumnRef()
+	if err != nil {
+		return nil, err
+	}
+	if isStar {
+		all = true
+	} else {
+		colNames = append(colNames, colName)
+	}
+
+	for p.acceptComma() {
+		colName, isStar, err = p.parseColumnRef()
+		if err != nil {
+			return nil, err
+		}
+		if isStar {
 			all = true
-		default:
-			return nil, fmt.Errorf("expected column name or *, got %s %s", p.read().kind, p.read().body)
+		} else {
+			colNames = append(colNames, colName)
 		}
 	}
+
 	from, err := p.parseFrom()
 	if err != nil {
 		return &SelectStatement{}, err
@@ -269,6 +294,23 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		all:         all,
 		where:       where,
 	}, nil
+}
+
+func (p *parser) parseColumnRef() (string, bool, error) {
+	switch p.read().kind {
+	case Identifier:
+		if len(p.read().body) == 0 {
+			return "", false, fmt.Errorf("expected column name identifier, got empty string")
+		}
+		return p.next().body, false, nil
+	case Star:
+		if _, err := p.expect(Star, "*"); err != nil {
+			return "", false, fmt.Errorf("expected *, got %s %s", p.read().kind, p.read().body)
+		}
+		return "", true, nil
+	default:
+		return "", false, fmt.Errorf("expected column name or *, got %s %s", p.read().kind, p.read().body)
+	}
 }
 
 func (p *parser) parseFrom() (*FromKeyword, error) {

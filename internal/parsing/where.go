@@ -13,5 +13,5 @@ type BinaryExpr struct {
 func (b *BinaryExpr) expressionMarker() {}
 
 func (b *BinaryExpr) String() string {
-	return fmt.Sprintf("%s %s %s", b.left.String(), b.op, b.right.String())
+	return fmt.Sprintf("(%s %s %s)", b.left.String(), b.op, b.right.String())
 }

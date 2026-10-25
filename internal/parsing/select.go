@@ -31,6 +31,9 @@ func (s *SelectStatement) String() string {
 		}
 	}
 	sb.WriteString(s.from.String())
+	if s.where != nil {
+		sb.WriteString(" WHERE " + s.where.String())
+	}
 	sb.WriteString(";")
 	return sb.String()
 }
