@@ -106,9 +106,15 @@ func lexParam(input string, start int) (Token, int, error) {
 }
 
 func lexWord(input string, start int) (Token, int, error) {
-	i := start + 1 // first char already known to be a word start
+	i := start
+	if start >= len(input) {
+		return Token{}, 0, fmt.Errorf("invalid `start` passed to lexWord")
+	}
 	for i < len(input) && isWordChar(input[i]) {
 		i++
+	}
+	if i == start {
+		return Token{}, 0, fmt.Errorf("first character '%s' is not a word character.", input[i])
 	}
 	body := input[start:i]
 	switch {
