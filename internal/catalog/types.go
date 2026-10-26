@@ -12,7 +12,7 @@ type Table struct {
 }
 
 type Catalog struct {
-	Tables map[string]Table
+	Tables map[string]*Table
 }
 
 // ideas:
