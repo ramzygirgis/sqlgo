@@ -114,7 +114,7 @@ func lexWord(input string, start int) (Token, int, error) {
 		i++
 	}
 	if i == start {
-		return Token{}, 0, fmt.Errorf("first character '%s' is not a word character.", input[i])
+		return Token{}, 0, fmt.Errorf("first character '%c' is not a word character.", input[i])
 	}
 	body := input[start:i]
 	switch {

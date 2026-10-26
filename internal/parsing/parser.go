@@ -21,8 +21,8 @@ func (p *parser) read() lexing.Token {
 	if p.pos >= len(p.toks) || p.pos < 0 {
 		// maybe we should treat this as an error
 		return lexing.Token{
-			Kind: lexing.EOF,
-			Body: "EOF",
+			Kind: lexing.OutOfBounds,
+			Body: "OutOfBounds",
 		}
 	}
 	return p.toks[p.pos]
@@ -93,6 +93,9 @@ func Parse(query string) (Statement, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(toks) == 0 {
+		return nil, fmt.Errorf("token stream is empty")
+	}
 	p := parser{
 		toks: toks,
 		pos:  0,
@@ -106,4 +109,31 @@ func Parse(query string) (Statement, error) {
 		return nil, err
 	}
 	return statement, nil
+}
+
+func ParseAll(query string) ([]Statement, error) {
+	toks, err := lexing.Lex(query)
+	if err != nil {
+		return nil, err
+	}
+	if len(toks) == 0 {
+		return nil, fmt.Errorf("token stream is empty")
+	}
+	p := parser{
+		toks: toks,
+		pos:  0,
+	}
+	var statements []Statement
+	for p.read().Kind != lexing.EOF && p.read().Kind != lexing.OutOfBounds {
+		statement, err := p.parseStatement()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, statement)
+	}
+	_, err = p.expectKind(lexing.EOF)
+	if err != nil {
+		return nil, err
+	}
+	return statements, nil
 }

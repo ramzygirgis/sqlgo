@@ -21,13 +21,14 @@ const (
 	Star
 	Semicolon
 	EOF
+	OutOfBounds
 )
 
 func (tk TokenKind) String() string {
 	strings := [...]string{"Illegal", "Identifier", "Keyword",
 		"Comma", "Number", "String", "Param", "Type",
 		"Comparator", "LParen", "RParen", "Star",
-		"Semicolon", "EOF",
+		"Semicolon", "EOF", "OutOfBounds",
 	}
 	if tk < 0 || int(tk) >= len(strings) {
 		return "TokenKind int out of range"

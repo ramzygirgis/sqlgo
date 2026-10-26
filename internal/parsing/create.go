@@ -6,9 +6,9 @@ import (
 )
 
 type CreateTableStatement struct {
-	tableName   string
-	columns     []Column
-	ifNotExists bool
+	TableName   string
+	Columns     []Column
+	IfNotExists bool
 }
 
 func (c *CreateTableStatement) statementMarker() {}
@@ -17,14 +17,14 @@ func (c *CreateTableStatement) String() string {
 	var sb strings.Builder
 
 	sb.WriteString("CREATE TABLE ")
-	if c.ifNotExists {
+	if c.IfNotExists {
 		sb.WriteString("IF NOT EXISTS ")
 	}
-	sb.WriteString(c.tableName)
+	sb.WriteString(c.TableName)
 	sb.WriteString(" (\n")
 
-	colStrs := make([]string, len(c.columns))
-	for i, col := range c.columns {
+	colStrs := make([]string, len(c.Columns))
+	for i, col := range c.Columns {
 		colStrs[i] = "   " + col.String()
 	}
 	sb.WriteString(strings.Join(colStrs, ",\n"))
@@ -33,16 +33,25 @@ func (c *CreateTableStatement) String() string {
 	return sb.String()
 }
 
+type Column struct {
+	Name       string
+	SqlType    string
+	HasDefault bool
+	DefaultVal string
+	Nullable   bool
+	PrimaryKey bool
+}
+
 func (col Column) String() string {
-	parts := []string{col.name, col.sqlType}
-	if !col.nullable {
+	parts := []string{col.Name, col.SqlType}
+	if !col.Nullable {
 		parts = append(parts, "NOT NULL")
 	}
-	if col.primaryKey {
+	if col.PrimaryKey {
 		parts = append(parts, "PRIMARY KEY")
 	}
-	if col.hasDefault {
-		parts = append(parts, "DEFAULT "+col.defaultVal)
+	if col.HasDefault {
+		parts = append(parts, "DEFAULT "+col.DefaultVal)
 	}
 	return strings.Join(parts, " ")
 }
@@ -96,19 +105,10 @@ func (p *parser) parseCreateTable() (*CreateTableStatement, error) {
 		return nil, err
 	}
 	return &CreateTableStatement{
-		tableName:   tableName,
-		columns:     cols,
-		ifNotExists: ifNotExists,
+		TableName:   tableName,
+		Columns:     cols,
+		IfNotExists: ifNotExists,
 	}, err
-}
-
-type Column struct {
-	name       string
-	sqlType    string
-	hasDefault bool
-	defaultVal string
-	nullable   bool
-	primaryKey bool
 }
 
 func (p *parser) parseColumnDef() (Column, error) {
@@ -163,11 +163,11 @@ constraints:
 		}
 	}
 	return Column{
-		name:       name,
-		sqlType:    sqlType,
-		hasDefault: hasDefault,
-		defaultVal: defaultVal,
-		nullable:   nullable,
-		primaryKey: primaryKey,
+		Name:       name,
+		SqlType:    sqlType,
+		HasDefault: hasDefault,
+		DefaultVal: defaultVal,
+		Nullable:   nullable,
+		PrimaryKey: primaryKey,
 	}, nil
 }
