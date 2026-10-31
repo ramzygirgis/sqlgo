@@ -63,6 +63,8 @@ func (p *parser) expectKeyword(body string) error {
 	return nil
 }
 
+// TODO: small refactor -- use a general AcceptType function instead.
+
 func (p *parser) acceptKeyword(body string) bool {
 	tok := p.read()
 	if tok.Kind != lexing.Keyword || tok.Body != body {
