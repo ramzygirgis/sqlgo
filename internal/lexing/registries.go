@@ -24,6 +24,9 @@ func isKeyword(s string) bool {
 	keywordSet["OR"] = struct{}{}
 	keywordSet["LParen"] = struct{}{}
 	keywordSet["RParen"] = struct{}{}
+	keywordSet["INSERT"] = struct{}{}
+	keywordSet["INTO"] = struct{}{}
+	keywordSet["VALUES"] = struct{}{}
 
 	_, ok := keywordSet[strings.ToUpper(s)]
 	return ok
