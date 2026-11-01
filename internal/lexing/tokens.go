@@ -7,7 +7,7 @@ import (
 type TokenKind int
 
 const (
-	Illegal TokenKind = iota
+	IllegalTokenKind TokenKind = iota
 	Identifier
 	Keyword
 	Comma
