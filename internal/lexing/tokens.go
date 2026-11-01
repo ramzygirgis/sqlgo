@@ -31,7 +31,7 @@ func (tk TokenKind) String() string {
 		"Semicolon", "EOF", "OutOfBounds",
 	}
 	if tk < 0 || int(tk) >= len(strings) {
-		return "TokenKind int out of range"
+		return fmt.Sprintf("TokenKind(%d)", tk)
 	}
 	return strings[tk]
 }
