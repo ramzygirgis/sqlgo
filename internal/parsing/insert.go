@@ -22,7 +22,7 @@ func (c *InsertIntoStatement) String() string {
 		sb.WriteString(" (")
 	}
 	for i, ref := range c.Columns {
-		sb.WriteString(ref.name)
+		sb.WriteString(ref.Name)
 		if i == len(c.Columns)-1 {
 			sb.WriteString(")")
 			break
@@ -59,13 +59,13 @@ func (p *parser) parseInsertInto() (*InsertIntoStatement, error) {
 		if err != nil {
 			return &InsertIntoStatement{}, err
 		}
-		colRefs = append(colRefs, ColumnRef{name: colName})
+		colRefs = append(colRefs, ColumnRef{Name: colName})
 		for p.acceptComma() {
 			colName, err = p.expectKind(lexing.Identifier)
 			if err != nil {
 				return &InsertIntoStatement{}, err
 			}
-			colRefs = append(colRefs, ColumnRef{name: colName})
+			colRefs = append(colRefs, ColumnRef{Name: colName})
 		}
 		if _, err = p.expectKind(lexing.RParen); err != nil {
 			return &InsertIntoStatement{}, err

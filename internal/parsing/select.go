@@ -7,34 +7,34 @@ import (
 )
 
 type SelectStatement struct {
-	columnNames []string
-	from        *FromKeyword
-	where       Expr
-	all         bool
+	ColumnNames []string
+	From        *FromKeyword
+	Where       Expr
+	All         bool
 }
 
 func (s *SelectStatement) statementMarker() {}
 
 func (s *SelectStatement) String() string {
 	var sb strings.Builder
-	lastIndex := len(s.columnNames) - 1
+	lastIndex := len(s.ColumnNames) - 1
 	sb.WriteString("SELECT")
-	if s.all {
+	if s.All {
 		sb.WriteString(" *")
 		if lastIndex != -1 {
 			sb.WriteString(",")
 		}
 	}
-	for i, colName := range s.columnNames {
+	for i, colName := range s.ColumnNames {
 		sb.WriteString(fmt.Sprintf(" %s", colName))
 		if i != lastIndex {
 			sb.WriteString(",")
 		}
 	}
-	sb.WriteString(s.from.String())
-	if s.where != nil {
+	sb.WriteString(s.From.String())
+	if s.Where != nil {
 		sb.WriteString(" WHERE ")
-		sb.WriteString(s.where.String())
+		sb.WriteString(s.Where.String())
 	}
 	sb.WriteString(";")
 	return sb.String()
@@ -95,10 +95,10 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 	}
 
 	return &SelectStatement{
-		columnNames: colNames,
-		from:        from,
-		all:         all,
-		where:       where,
+		ColumnNames: colNames,
+		From:        from,
+		All:         all,
+		Where:       where,
 	}, nil
 }
 

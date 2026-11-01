@@ -12,15 +12,15 @@ type Expr interface {
 }
 
 type BinaryExpr struct {
-	op    string
-	left  Expr
-	right Expr
+	Op    string
+	Left  Expr
+	Right Expr
 }
 
 func (b *BinaryExpr) expressionMarker() {}
 
 func (b *BinaryExpr) String() string {
-	return fmt.Sprintf("(%s %s %s)", b.left.String(), b.op, b.right.String())
+	return fmt.Sprintf("(%s %s %s)", b.Left.String(), b.Op, b.Right.String())
 }
 
 func (p *parser) parseExpr() (Expr, error) {
@@ -30,13 +30,13 @@ func (p *parser) parseExpr() (Expr, error) {
 // Column References
 
 type ColumnRef struct {
-	name string
+	Name string
 }
 
 func (c *ColumnRef) expressionMarker() {}
 
 func (c *ColumnRef) String() string {
-	return c.name
+	return c.Name
 }
 
 func (p *parser) parseColumnRef() (string, bool, error) {
@@ -71,13 +71,13 @@ func (l *Literal) String() string {
 // Parameters
 
 type Parameter struct {
-	index int
+	Index int
 }
 
 func (p *Parameter) expressionMarker() {}
 
 func (p *Parameter) String() string {
-	return fmt.Sprintf("$%d", p.index)
+	return fmt.Sprintf("$%d", p.Index)
 }
 
 func unpackParameter(s string) (*Parameter, error) {
@@ -91,7 +91,7 @@ func unpackParameter(s string) (*Parameter, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot cast %s to int", s[1:])
 	}
-	return &Parameter{index: num}, nil
+	return &Parameter{Index: num}, nil
 }
 
 func (p *parser) parseOrExpr() (Expr, error) {
@@ -104,7 +104,7 @@ func (p *parser) parseOrExpr() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		left = &BinaryExpr{op: "OR", left: left, right: right}
+		left = &BinaryExpr{Op: "OR", Left: left, Right: right}
 	}
 	return left, nil
 }
@@ -119,7 +119,7 @@ func (p *parser) parseAndExpr() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		left = &BinaryExpr{op: "AND", left: left, right: right}
+		left = &BinaryExpr{Op: "AND", Left: left, Right: right}
 	}
 	return left, nil
 }
@@ -139,7 +139,7 @@ func (p *parser) parseComparison() (Expr, error) {
 		return nil, err
 	}
 
-	return &BinaryExpr{op: op, left: left, right: right}, nil
+	return &BinaryExpr{Op: op, Left: left, Right: right}, nil
 }
 
 func (p *parser) parseOperand() (Expr, error) {
