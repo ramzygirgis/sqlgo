@@ -25,7 +25,7 @@ const (
 )
 
 func (tk TokenKind) String() string {
-	strings := [...]string{"Illegal", "Identifier", "Keyword",
+	strings := [...]string{"IllegalTokenKind", "Identifier", "Keyword",
 		"Comma", "Number", "String", "Param", "Type",
 		"Comparator", "LParen", "RParen", "Star",
 		"Semicolon", "EOF", "OutOfBounds",
