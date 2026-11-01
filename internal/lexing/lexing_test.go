@@ -43,6 +43,30 @@ func TestLexKinds(t *testing.T) {
 			[]TokenKind{Identifier, Identifier, EOF}},
 		{"empty input", ``,
 			[]TokenKind{EOF}},
+
+		// --- INSERT ---
+		{"insert with columns", `INSERT INTO users (id, name) VALUES (1, 'bob');`,
+			[]TokenKind{
+				Keyword, Keyword, Identifier,
+				LParen, Identifier, Comma, Identifier, RParen,
+				Keyword,
+				LParen, Number, Comma, String, RParen,
+				Semicolon, EOF,
+			}},
+		{"insert without columns", `INSERT INTO users VALUES ($1, $2);`,
+			[]TokenKind{
+				Keyword, Keyword, Identifier, Keyword,
+				LParen, Param, Comma, Param, RParen,
+				Semicolon, EOF,
+			}},
+		{"insert no spaces", `INSERT INTO t(a,b)VALUES(1,2);`,
+			[]TokenKind{
+				Keyword, Keyword, Identifier,
+				LParen, Identifier, Comma, Identifier, RParen,
+				Keyword,
+				LParen, Number, Comma, Number, RParen,
+				Semicolon, EOF,
+			}},
 	}
 
 	for _, tt := range tests {
@@ -77,6 +101,7 @@ func TestLexBodies(t *testing.T) {
 		{"string keeps quotes", `'hi there'`, []string{"'hi there'"}},
 		{"escaped quote kept raw", `'O''Brien'`, []string{"'O''Brien'"}},
 		{"param keeps dollar", `$12`, []string{"$12"}},
+		{"insert keywords uppercased", `insert into t values`, []string{"INSERT", "INTO", "t", "VALUES"}},
 	}
 
 	for _, tt := range tests {

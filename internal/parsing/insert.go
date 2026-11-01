@@ -8,7 +8,7 @@ import (
 type InsertIntoStatement struct {
 	TableName string
 	Columns   []ColumnRef
-	Values    []string
+	Values    []Expr
 }
 
 func (c *InsertIntoStatement) statementMarker() {}
@@ -24,14 +24,14 @@ func (c *InsertIntoStatement) String() string {
 	for i, ref := range c.Columns {
 		sb.WriteString(ref.name)
 		if i == len(c.Columns)-1 {
-			sb.WriteString(")\n")
+			sb.WriteString(")")
 			break
 		}
 		sb.WriteString(", ")
 	}
-	sb.WriteString("VALUES (")
+	sb.WriteString("\nVALUES (")
 	for i, val := range c.Values {
-		sb.WriteString(val)
+		sb.WriteString(val.String())
 		if i == len(c.Values)-1 {
 			sb.WriteString(");")
 			break
@@ -77,14 +77,14 @@ func (p *parser) parseInsertInto() (*InsertIntoStatement, error) {
 	if _, err = p.expectKind(lexing.LParen); err != nil {
 		return &InsertIntoStatement{}, err
 	}
-	values := make([]string, 0)
-	val, err := p.expectKind(lexing.Identifier)
+	values := make([]Expr, 0)
+	val, err := p.parseExpr()
 	if err != nil {
 		return &InsertIntoStatement{}, err
 	}
 	values = append(values, val)
 	for p.acceptComma() {
-		val, err := p.expectKind(lexing.Identifier)
+		val, err := p.parseExpr()
 		if err != nil {
 			return &InsertIntoStatement{}, err
 		}

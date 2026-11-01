@@ -39,6 +39,12 @@ func (p *parser) parseStatement() (Statement, error) {
 		default:
 			return nil, fmt.Errorf("expected CREATE keyword to be followed by another keyword.")
 		}
+	case "INSERT":
+		insertIntoStatementPtr, err := p.parseInsertInto()
+		if err != nil {
+			return nil, err
+		}
+		return insertIntoStatementPtr, nil
 	default:
 		return nil, fmt.Errorf("expected query to begin with a statement")
 	}

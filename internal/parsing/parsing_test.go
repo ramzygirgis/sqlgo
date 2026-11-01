@@ -112,6 +112,50 @@ func TestParseRoundTrip(t *testing.T) {
 			`CREATE TABLE IF NOT EXISTS users (name TEXT);`,
 			`CREATE TABLE IF NOT EXISTS users ( name TEXT );`,
 		},
+
+		// --- INSERT ---
+		// NOTE: assumes String() prints `INSERT INTO t (a, b) VALUES (1, 2);`.
+		// Whitespace is normalized, but adjust if your paren/comma spacing differs.
+		{
+			"insert with columns",
+			`INSERT INTO users (id, name) VALUES (1, 'bob');`,
+			`INSERT INTO users (id, name) VALUES (1, 'bob');`,
+		},
+		{
+			"insert without columns",
+			`INSERT INTO users VALUES (1, 'bob');`,
+			`INSERT INTO users VALUES (1, 'bob');`,
+		},
+		{
+			"insert single value",
+			`INSERT INTO t (a) VALUES (1);`,
+			`INSERT INTO t (a) VALUES (1);`,
+		},
+		{
+			"insert params",
+			`INSERT INTO users (id, name) VALUES ($1, $2);`,
+			`INSERT INTO users (id, name) VALUES ($1, $2);`,
+		},
+		{
+			"insert mixed literals and params",
+			`INSERT INTO t (a, b, c) VALUES ($1, 5.3, 'x');`,
+			`INSERT INTO t (a, b, c) VALUES ($1, 5.3, 'x');`,
+		},
+		{
+			"insert lowercase and no spaces",
+			`insert into t(a,b)values(1,2);`,
+			`INSERT INTO t (a, b) VALUES (1, 2);`,
+		},
+		{
+			"insert escaped quote",
+			`INSERT INTO t (name) VALUES ('O''Brien');`,
+			`INSERT INTO t (name) VALUES ('O''Brien');`,
+		},
+		{
+			"insert multiline",
+			"INSERT INTO users (\n\tid,\n\tname\n) VALUES (\n\t1,\n\t'bob'\n);",
+			`INSERT INTO users (id, name) VALUES (1, 'bob');`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -179,6 +223,24 @@ func TestParseErrors(t *testing.T) {
 		{"create missing name", `CREATE TABLE (a TEXT);`},
 		{"create without TABLE", `CREATE users (a TEXT);`},
 		{"create IF without NOT EXISTS", `CREATE TABLE IF users (a TEXT);`},
+
+		// --- INSERT ---
+		{"insert missing INTO", `INSERT users VALUES (1);`},
+		{"insert missing table", `INSERT INTO VALUES (1);`},
+		{"insert missing VALUES", `INSERT INTO users (id) (1);`},
+		{"insert missing values list", `INSERT INTO users (id) VALUES;`},
+		{"insert values without parens", `INSERT INTO users VALUES 1, 2;`},
+		{"insert empty values", `INSERT INTO users VALUES ();`},
+		{"insert empty column list", `INSERT INTO users () VALUES (1);`},
+		{"insert trailing comma in columns", `INSERT INTO users (id,) VALUES (1);`},
+		{"insert trailing comma in values", `INSERT INTO users (id) VALUES (1,);`},
+		{"insert missing comma in columns", `INSERT INTO users (id name) VALUES (1, 2);`},
+		{"insert missing comma in values", `INSERT INTO users (id, name) VALUES (1 2);`},
+		{"insert unclosed columns", `INSERT INTO users (id VALUES (1);`},
+		{"insert unclosed values", `INSERT INTO users (id) VALUES (1;`},
+		{"insert missing semicolon", `INSERT INTO users VALUES (1)`},
+		{"insert trailing junk", `INSERT INTO users VALUES (1); junk`},
+		{"insert star in columns", `INSERT INTO users (*) VALUES (1);`},
 	}
 
 	for _, tt := range tests {
