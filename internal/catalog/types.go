@@ -6,11 +6,6 @@ type Column struct {
 	Nullable bool
 }
 
-type Table struct {
-	Name    string
-	Columns []Column
-}
-
 type Catalog struct {
 	Tables map[string]*Table
 }
