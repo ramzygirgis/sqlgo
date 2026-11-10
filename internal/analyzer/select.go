@@ -72,9 +72,55 @@ func collectColumns(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Colu
 	return resultColumns, nil
 }
 
-func collectParams(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Parameter, error) {
-	seen := map[int]ir.SQLType
-	parameters := make([]ir.Parameter)
+type Param struct {
+	Index int
+	Type  string // i feel like this should be an iota
+}
 
-	// TODO
+// returns a list of params. not deduped -- one should process the result of this
+// to look for duplicates, and ensure that no duplicates contract eachother.
+func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
+	switch t := where.(type) {
+	case *parsing.BinaryExpr:
+		if t.Left.(type) == parsing.Parameter && t.Right.(type) == parsing.ColumnRef {
+			colName := t.Right.(*parsing.ColumnRef).Name
+			col, ok := table.Column(colName)
+			if !ok {
+				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colName, table.Name)
+			}
+			param := Param{Index: t.Left.(*parsing.Parameter).Index, Type: col.SqlType}
+			return []Param{param}, nil
+		}
+		if t.Left.(type) == parsing.Column && t.Right.(type) == parsing.Parameter {
+			colName := t.Left.(*parsing.ColumnRef).Name
+			col, ok := table.Column(colName)
+			if !ok {
+				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colName, table.Name)
+			}
+			param := Param{Index: t.Right.(*parsing.Parameter).Index, Type: col.SqlType}
+			return []Param{param}, nil
+		}
+		whereLeft, err := walkWhere(table, t.Left)
+		if err != nil {
+			return []Param{}, err
+		}
+		whereRight, err := walkWhere(table, t.Right)
+		if err != nil {
+			return []Param{}, err
+		}
+		return append(whereLeft, whereRight...), nil
+	case *parsing.ColumnRef:
+		if _, ok := table.Column(t.Name); !ok {
+			return []Param{}, fmt.Errorf("invalid column reference %s for table %s", t.Name, table.Name)
+		}
+		return []Param{}, nil
+	case *parsing.Parameter:
+		// should probably throw here
+		return []Param{}, nil
+	case *parsing.Literal:
+		// check that ltieral's type is valid -- all literals are stores as strings, so should think about this.
+		return []Param{}, nil
+	default:
+		return []Param{}, fmt.Errorf("unexpected parsing.Expr type %s", t)
+	}
 }
