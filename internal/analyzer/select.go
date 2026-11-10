@@ -82,22 +82,13 @@ type Param struct {
 func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 	switch t := where.(type) {
 	case *parsing.BinaryExpr:
-		if t.Left.(type) == parsing.Parameter && t.Right.(type) == parsing.ColumnRef {
-			colName := t.Right.(*parsing.ColumnRef).Name
-			col, ok := table.Column(colName)
+		colRef, paramRef, isPair := columnParamPair(t)
+		if isPair {
+			col, ok := table.Column(colRef.Name)
 			if !ok {
-				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colName, table.Name)
+				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef, table.Name)
 			}
-			param := Param{Index: t.Left.(*parsing.Parameter).Index, Type: col.SqlType}
-			return []Param{param}, nil
-		}
-		if t.Left.(type) == parsing.Column && t.Right.(type) == parsing.Parameter {
-			colName := t.Left.(*parsing.ColumnRef).Name
-			col, ok := table.Column(colName)
-			if !ok {
-				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colName, table.Name)
-			}
-			param := Param{Index: t.Right.(*parsing.Parameter).Index, Type: col.SqlType}
+			param := Param{Index: paramRef.Index, Type: col.SqlType}
 			return []Param{param}, nil
 		}
 		whereLeft, err := walkWhere(table, t.Left)
