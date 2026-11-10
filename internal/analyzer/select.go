@@ -86,7 +86,7 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 		if isPair {
 			col, ok := table.Column(colRef.Name)
 			if !ok {
-				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef, table.Name)
+				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef.Name, table.Name)
 			}
 			param := Param{Index: paramRef.Index, Type: col.SqlType}
 			return []Param{param}, nil
@@ -106,13 +106,13 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 		}
 		return []Param{}, nil
 	case *parsing.Parameter:
-		// should probably throw here
-		return []Param{}, nil
+		// for now, this is not doable. in future, we can accept casting, or inferring param types from other known param types
+		return []Param{}, fmt.Errorf("param %d must be compared to a column so that types can be inferred", t.Index)
 	case *parsing.Literal:
 		// check that ltieral's type is valid -- all literals are stores as strings, so should think about this.
 		return []Param{}, nil
 	default:
-		return []Param{}, fmt.Errorf("unexpected parsing.Expr type %s", t)
+		return []Param{}, fmt.Errorf("unexpected parsing.Expr type %T", t)
 	}
 }
 
