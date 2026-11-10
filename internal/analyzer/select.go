@@ -124,3 +124,25 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 		return []Param{}, fmt.Errorf("unexpected parsing.Expr type %s", t)
 	}
 }
+
+func columnParamPair(b *parsing.BinaryExpr) (*parsing.ColumnRef, *parsing.Parameter, bool) {
+	if b.Op == "AND" || b.Op == "OR" {
+		return nil, nil, false
+	}
+	rightParam, rightIsParam := b.Right.(*parsing.Parameter)
+	if rightIsParam {
+		leftCol, leftIsCol := b.Left.(*parsing.ColumnRef)
+		if leftIsCol {
+			return leftCol, rightParam, true
+		}
+	}
+
+	leftParam, leftIsParam := b.Left.(*parsing.Parameter)
+	if leftIsParam {
+		rightCol, rightIsCol := b.Right.(*parsing.ColumnRef)
+		if rightIsCol {
+			return rightCol, leftParam, true
+		}
+	}
+	return nil, nil, false
+}
