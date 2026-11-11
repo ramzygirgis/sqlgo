@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ramzygirgis/sqlgo/internal/catalog"
 	"github.com/ramzygirgis/sqlgo/internal/ir"
@@ -37,7 +38,7 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 		TargetTable:   tableName,
 		Parameters:    parameters,
 		ResultColumns: resultColumns,
-		Sql:           expanded.String(),
+		Sql:           expandedSqlString(s, resultColumns),
 	}, nil
 }
 
@@ -173,4 +174,23 @@ func columnParamPair(b *parsing.BinaryExpr) (*parsing.ColumnRef, *parsing.Parame
 		}
 	}
 	return nil, nil, false
+}
+
+func expandedSqlString(s *parsing.SelectStatement, columns []ir.Column) string {
+	var sb strings.Builder
+	lastIndex := len(columns) - 1
+	sb.WriteString("SELECT")
+	for i, colName := range columns {
+		sb.WriteString(fmt.Sprintf(" %s", colName))
+		if i != lastIndex {
+			sb.WriteString(",")
+		}
+	}
+	sb.WriteString(s.From.String())
+	if s.Where != nil {
+		sb.WriteString(" WHERE ")
+		sb.WriteString(s.Where.String())
+	}
+	sb.WriteString(";")
+	return sb.String()
 }
