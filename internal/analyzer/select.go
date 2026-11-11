@@ -72,9 +72,40 @@ func collectColumns(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Colu
 	return resultColumns, nil
 }
 
+func validateParameters(params []Param) ([]ir.Parameter, error) {
+	indexToParam := make(map[int]ir.Parameter)
+	maxIndexSoFar := 0
+	for _, param := range params {
+		t, err := toSQLType(param.sqlType)
+		if err != nil {
+			return []ir.Parameter{}, err
+		}
+		if cur, ok := indexToParam[param.index]; ok {
+			if cur.SqlType != t {
+				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, t, cur)
+			}
+		}
+		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: param.nullable}
+		if param.index > maxIndexSoFar {
+			maxIndexSoFar = param.index
+		}
+	}
+	res := make([]ir.Parameter, 0)
+	for i := 1; i <= maxIndexSoFar; i++ {
+		p, ok := indexToParam[i]
+		if !ok {
+			return []ir.Parameter{}, fmt.Errorf("$%d missing", i)
+		}
+		res = append(res, p)
+
+	}
+	return res, nil
+}
+
 type Param struct {
-	Index int
-	Type  string // i feel like this should be an iota
+	index    int
+	sqlType  string // i feel like this should be an iota
+	nullable bool
 }
 
 // returns a list of params. not deduped -- one should process the result of this
@@ -88,7 +119,7 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 			if !ok {
 				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef.Name, table.Name)
 			}
-			param := Param{Index: paramRef.Index, Type: col.SqlType}
+			param := Param{index: paramRef.Index, sqlType: col.SqlType, nullable: col.Nullable}
 			return []Param{param}, nil
 		}
 		whereLeft, err := walkWhere(table, t.Left)
