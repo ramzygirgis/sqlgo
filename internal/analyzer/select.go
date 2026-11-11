@@ -22,7 +22,15 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 	if err != nil {
 		return &ir.Query{}, err
 	}
-	// TODO
+
+	params, err := walkWhere(table, s.Where)
+	if err != nil {
+		return nil, err
+	}
+	parameters, err := validateParameters(params)
+	if err != nil {
+		return nil, err
+	}
 
 	return &ir.Query{
 		Kind:          ir.Select,
@@ -76,6 +84,9 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 	indexToParam := make(map[int]ir.Parameter)
 	maxIndexSoFar := 0
 	for _, param := range params {
+		if param.index <= 0 {
+			return []ir.Parameter{}, fmt.Errorf("illegal parameter $%d: all parameter indices must be positive")
+		}
 		t, err := toSQLType(param.sqlType)
 		if err != nil {
 			return []ir.Parameter{}, err
@@ -133,7 +144,7 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 		return []Param{}, nil
 	case *parsing.Parameter:
 		// for now, this is not doable. in future, we can accept casting, or inferring param types from other known param types
-		return []Param{}, fmt.Errorf("param %d must be compared to a column so that types can be inferred", t.Index)
+		return []Param{}, fmt.Errorf("param $%d must be compared to a column so that types can be inferred", t.Index)
 	case *parsing.Literal:
 		// check that ltieral's type is valid -- all literals are stores as strings, so should think about this.
 		return []Param{}, nil
