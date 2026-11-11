@@ -21,16 +21,19 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 
 	resultColumns, err := collectColumns(cat, s)
 	if err != nil {
-		return &ir.Query{}, err
+		return nil, err
 	}
 
-	params, err := walkWhere(table, s.Where)
-	if err != nil {
-		return nil, err
-	}
-	parameters, err := validateParameters(params)
-	if err != nil {
-		return nil, err
+	var parameters []ir.Parameter
+	if s.Where != nil {
+		params, err := walkWhere(table, s.Where)
+		if err != nil {
+			return nil, err
+		}
+		parameters, err = validateParameters(params)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ir.Query{
@@ -86,7 +89,7 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 	maxIndexSoFar := 0
 	for _, param := range params {
 		if param.index <= 0 {
-			return []ir.Parameter{}, fmt.Errorf("illegal parameter $%d: all parameter indices must be positive")
+			return []ir.Parameter{}, fmt.Errorf("illegal parameter $%d: all parameter indices must be positive", param.index)
 		}
 		t, err := toSQLType(param.sqlType)
 		if err != nil {
@@ -94,7 +97,7 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 		}
 		if cur, ok := indexToParam[param.index]; ok {
 			if cur.SqlType != t {
-				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, t, cur)
+				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, t, cur.SqlType)
 			}
 		}
 		// by default, params in a select should not be nullable. (col = NULL is invalid)
@@ -103,7 +106,7 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 			maxIndexSoFar = param.index
 		}
 	}
-	res := make([]ir.Parameter, 0)
+	var res []ir.Parameter
 	for i := 1; i <= maxIndexSoFar; i++ {
 		p, ok := indexToParam[i]
 		if !ok {
@@ -180,7 +183,8 @@ func expandedSqlString(s *parsing.SelectStatement, columns []ir.Column) string {
 	var sb strings.Builder
 	lastIndex := len(columns) - 1
 	sb.WriteString("SELECT")
-	for i, colName := range columns {
+	for i, col := range columns {
+		colName := col.Name
 		sb.WriteString(fmt.Sprintf(" %s", colName))
 		if i != lastIndex {
 			sb.WriteString(",")
