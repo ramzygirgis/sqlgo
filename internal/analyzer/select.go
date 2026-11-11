@@ -85,7 +85,8 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, t, cur)
 			}
 		}
-		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: param.nullable}
+		// by default, params in a select should not be nullable. (col = NULL is invalid)
+		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: false}
 		if param.index > maxIndexSoFar {
 			maxIndexSoFar = param.index
 		}
@@ -102,12 +103,6 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 	return res, nil
 }
 
-type Param struct {
-	index    int
-	sqlType  string // i feel like this should be an iota
-	nullable bool
-}
-
 // returns a list of params. not deduped -- one should process the result of this
 // to look for duplicates, and ensure that no duplicates contract eachother.
 func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
@@ -119,7 +114,7 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 			if !ok {
 				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef.Name, table.Name)
 			}
-			param := Param{index: paramRef.Index, sqlType: col.SqlType, nullable: col.Nullable}
+			param := Param{index: paramRef.Index, sqlType: col.SqlType}
 			return []Param{param}, nil
 		}
 		whereLeft, err := walkWhere(table, t.Left)
