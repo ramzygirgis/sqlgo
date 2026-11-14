@@ -20,6 +20,9 @@ func ParseSchema(query string) ([]Statement, error) {
 	}
 	var statements []Statement
 	for p.read().Kind != lexing.EOF && p.read().Kind != lexing.OutOfBounds {
+		if lexing.IsAnnotation(p.read().Kind) {
+			return nil, fmt.Errorf("annotation %q is not allowed in a schema file", p.read().Body)
+		}
 		statement, err := p.parseStatement()
 		if err != nil {
 			return nil, err
