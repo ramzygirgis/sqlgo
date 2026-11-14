@@ -84,23 +84,19 @@ func inferInsertParams(table *catalog.Table, columns []ir.Column, values []parsi
 	}
 	var params []Param
 	for i, value := range values {
-		parentColumn, ok := table.Column(columns[i].Name)
-		if !ok {
-			return []Param{}, fmt.Errorf("invalid column reference %q for table %q", columns[i].Name, table.Name)
-		}
 		switch v := value.(type) {
 		case *parsing.Parameter:
-			param := Param{index: v.Index, sqlType: parentColumn.SqlType, nullable: parentColumn.Nullable}
+			param := Param{index: v.Index, sqlType: columns[i].SqlType, nullable: columns[i].Nullable}
 			params = append(params, param)
 		case *parsing.ColumnRef:
 			return []Param{}, fmt.Errorf("cannot pass column reference %q as a value in an INSERT INTO statement", v.Name)
 		case *parsing.BinaryExpr:
-			err := validateBinaryExpr(v, parentColumn)
+			err := validateBinaryExpr(v, columns[i])
 			if err != nil {
 				return []Param{}, err
 			}
 		case *parsing.Literal:
-			err := validateLiteral(v, parentColumn)
+			err := validateLiteral(v, columns[i])
 			if err != nil {
 				return []Param{}, err
 			}
@@ -111,7 +107,7 @@ func inferInsertParams(table *catalog.Table, columns []ir.Column, values []parsi
 	return params, nil
 }
 
-func validateLiteral(l *parsing.Literal, column *catalog.Column) error {
+func validateLiteral(l *parsing.Literal, column ir.Column) error {
 	// todo: compare value's type with column's type, such as
 	// - if a literal is castable
 	if l.Body == "NULL" && !column.Nullable {
@@ -120,6 +116,6 @@ func validateLiteral(l *parsing.Literal, column *catalog.Column) error {
 	return nil
 }
 
-func validateBinaryExpr(b *parsing.BinaryExpr, column *catalog.Column) error {
+func validateBinaryExpr(b *parsing.BinaryExpr, column ir.Column) error {
 	return fmt.Errorf("unsupported expression in VALUES; probably needs to be evaluated")
 }
