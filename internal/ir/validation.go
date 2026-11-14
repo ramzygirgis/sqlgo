@@ -16,7 +16,12 @@ func (q *Query) Validate() error {
 
 	for _, col := range q.ResultColumns {
 		if col.SqlType == IllegalSQLType {
-			return fmt.Errorf("invalid SQL type for param %s", col.Name)
+			return fmt.Errorf("invalid SQL type for column %s", col.Name)
+		}
+	}
+	for _, col := range q.TargetColumns {
+		if col.SqlType == IllegalSQLType {
+			return fmt.Errorf("invalid SQL type for column %s", col.Name)
 		}
 	}
 
