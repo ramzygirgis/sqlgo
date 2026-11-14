@@ -45,31 +45,34 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 }
 
 func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) ([]ir.Column, error) {
-	// potentially unnecessary check:
+	var columns []catalog.Column
 	if len(s.Columns) == 0 {
-		return []ir.Column{}, fmt.Errorf("INSERT INTO statement contains no column references")
+		columns = table.Columns
+	} else {
+		seen := make(map[string]struct{})
+		for _, colRef := range s.Columns {
+			colName := colRef.Name
+			if _, ok := seen[colName]; ok {
+				return []ir.Column{}, fmt.Errorf("column %q is referenced multiple times", colName)
+			}
+			seen[colName] = struct{}{}
+			col, ok := table.Column(colName)
+			if !ok {
+				return nil, fmt.Errorf("column %q does not exist in table %q", colName, table.Name)
+			}
+			columns = append(columns, *col)
+		}
 	}
 
-	seen := make(map[string]struct{})
 	var resultColumns []ir.Column
-	for _, colRef := range s.Columns {
-		// duplicate check
-		colName := colRef.Name
-		if _, ok := seen[colName]; ok {
-			return []ir.Column{}, fmt.Errorf("column %q is referenced multiple times", colName)
-		}
-		seen[colName] = struct{}{}
-		// existence in table
-		col, ok := table.Column(colName)
-		if !ok {
-			return nil, fmt.Errorf("column %q does not exist in table %q", colName, table.Name)
-		}
-		irCol, err := toIRColumn(table.Name, *col)
+	for _, col := range columns {
+		irCol, err := toIRColumn(table.Name, col)
 		if err != nil {
 			return nil, err
 		}
 		resultColumns = append(resultColumns, irCol)
 	}
+
 	return resultColumns, nil
 }
 
