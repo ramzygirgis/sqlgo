@@ -4,12 +4,15 @@ import "testing"
 
 func validSelect() Query {
 	return Query{
+		Name:        "GetUser",
+		Cardinality: One,
 		Kind:        Select,
 		TargetTable: "users",
 		Parameters: []Parameter{
 			{Index: 1, SqlType: TypeInt, Nullable: false},
 			{Index: 2, SqlType: TypeText, Nullable: false},
 		},
+		TargetColumns: nil,
 		ResultColumns: []Column{
 			{Name: "id", SqlType: TypeInt, Nullable: false},
 			{Name: "bio", SqlType: TypeText, Nullable: true},
@@ -20,12 +23,19 @@ func validSelect() Query {
 
 func validInsert() Query {
 	return Query{
+		Name:        "CreateUser",
+		Cardinality: Exec,
 		Kind:        Insert,
 		TargetTable: "users",
 		Parameters: []Parameter{
 			{Index: 1, SqlType: TypeInt, Nullable: false},
 			{Index: 2, SqlType: TypeText, Nullable: false},
 			{Index: 3, SqlType: TypeText, Nullable: true},
+		},
+		TargetColumns: []Column{
+			{Name: "id", SqlType: TypeInt, Nullable: false},
+			{Name: "name", SqlType: TypeText, Nullable: false},
+			{Name: "bio", SqlType: TypeText, Nullable: true},
 		},
 		ResultColumns: nil,
 		Sql:           "INSERT INTO users (id, name, bio) VALUES ($1, $2, $3);",
@@ -59,6 +69,21 @@ func TestValidateAccepts(t *testing.T) {
 			q.Parameters[0].Nullable = true
 			return q
 		}()},
+
+		// --- cardinality ---
+		{"select :one", validSelect()},
+		{"select :many", func() Query {
+			q := validSelect()
+			q.Cardinality = Many
+			return q
+		}()},
+		// Delete this case if you decide :exec on a SELECT should be rejected.
+		{"select :exec", func() Query {
+			q := validSelect()
+			q.Cardinality = Exec
+			return q
+		}()},
+		{"insert :exec", validInsert()},
 	}
 
 	for _, tt := range tests {
@@ -129,10 +154,46 @@ func TestValidateRejects(t *testing.T) {
 			q.Parameters[2].SqlType = IllegalSQLType
 		}, validInsert},
 
+		// --- target columns ---
+		{"select with target columns", func(q *Query) {
+			q.TargetColumns = []Column{{Name: "id", SqlType: TypeInt}}
+		}, validSelect},
+		{"insert with no target columns (nil)", func(q *Query) {
+			q.TargetColumns = nil
+		}, validInsert},
+		{"insert with no target columns (empty)", func(q *Query) {
+			q.TargetColumns = []Column{}
+		}, validInsert},
+		{"target column with illegal type", func(q *Query) {
+			q.TargetColumns[1].SqlType = IllegalSQLType
+		}, validInsert},
+
 		// --- query kind ---
 		{"illegal query kind", func(q *Query) {
 			q.Kind = IllegalQueryKind
 		}, validSelect},
+
+		// --- name ---
+		{"empty name on select", func(q *Query) {
+			q.Name = ""
+		}, validSelect},
+		{"empty name on insert", func(q *Query) {
+			q.Name = ""
+		}, validInsert},
+
+		// --- cardinality ---
+		{"illegal cardinality", func(q *Query) {
+			q.Cardinality = IllegalCardinality
+		}, validSelect},
+		{"out-of-range cardinality", func(q *Query) {
+			q.Cardinality = Cardinality(99)
+		}, validSelect},
+		{"insert :one", func(q *Query) {
+			q.Cardinality = One
+		}, validInsert},
+		{"insert :many", func(q *Query) {
+			q.Cardinality = Many
+		}, validInsert},
 	}
 
 	for _, tt := range tests {
@@ -173,6 +234,25 @@ func TestQueryKindString(t *testing.T) {
 	for _, tt := range tests {
 		if got := tt.kind.String(); got != tt.want {
 			t.Errorf("QueryKind(%d).String() = %q, want %q", int(tt.kind), got, tt.want)
+		}
+	}
+}
+
+func TestCardinalityString(t *testing.T) {
+	tests := []struct {
+		c    Cardinality
+		want string
+	}{
+		{IllegalCardinality, "IllegalCardinality"},
+		{One, "One"},
+		{Many, "Many"},
+		{Exec, "Exec"},
+		{Cardinality(99), "Cardinality(99)"},
+		{Cardinality(-1), "Cardinality(-1)"},
+	}
+	for _, tt := range tests {
+		if got := tt.c.String(); got != tt.want {
+			t.Errorf("Cardinality(%d).String() = %q, want %q", int(tt.c), got, tt.want)
 		}
 	}
 }

@@ -36,12 +36,18 @@ func (q *Query) Validate() error {
 		if len(q.TargetColumns) != 0 {
 			return fmt.Errorf("SELECT statement has target columns")
 		}
+		if q.Cardinality == Exec {
+			return fmt.Errorf("SELECT statement cannot have cardinality :exec")
+		}
 	case Insert:
 		if len(q.ResultColumns) != 0 {
 			return fmt.Errorf("INSERT statement has a nonzero amount of result columns")
 		}
 		if len(q.TargetColumns) == 0 {
 			return fmt.Errorf("INSERT statement has no target columns")
+		}
+		if q.Cardinality != Exec {
+			return fmt.Errorf("INSERT statement can only have cardinality :exec")
 		}
 	default:
 		return fmt.Errorf("invalid query kind %s", q.Kind)
