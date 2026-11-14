@@ -92,7 +92,11 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 			if !ok {
 				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef.Name, table.Name)
 			}
-			param := Param{index: paramRef.Index, sqlType: col.SqlType, nullable: false}
+			IRCol, err := toIRColumn(table.Name, *col)
+			if err != nil {
+				return []Param{}, err
+			}
+			param := Param{index: paramRef.Index, sqlType: IRCol.SqlType, nullable: false}
 			return []Param{param}, nil
 		}
 		whereLeft, err := walkWhere(table, t.Left)

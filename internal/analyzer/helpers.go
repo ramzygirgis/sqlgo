@@ -23,17 +23,13 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 		if param.index <= 0 {
 			return []ir.Parameter{}, fmt.Errorf("illegal parameter $%d: all parameter indices must be positive", param.index)
 		}
-		t, err := toSQLType(param.sqlType)
-		if err != nil {
-			return []ir.Parameter{}, err
-		}
 		if cur, ok := indexToParam[param.index]; ok {
-			if cur.SqlType != t {
-				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, t, cur.SqlType)
+			if cur.SqlType != param.sqlType {
+				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, cur.SqlType)
 			}
 		}
 		// by default, params in a select should not be nullable. (col = NULL is invalid)
-		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: param.nullable}
+		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: param.sqlType, Nullable: param.nullable}
 		if param.index > maxIndexSoFar {
 			maxIndexSoFar = param.index
 		}
@@ -42,7 +38,7 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 	for i := 1; i <= maxIndexSoFar; i++ {
 		p, ok := indexToParam[i]
 		if !ok {
-			return []ir.Parameter{}, fmt.Errorf("$%d missing", i)
+			return []ir.Parameter{}, fmt.Errorf("parameter $%d missing", i)
 		}
 		res = append(res, p)
 

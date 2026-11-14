@@ -77,7 +77,7 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 }
 
 // extract parameters and validate values
-func inferInsertParams(table *catalog.Table, columns []ir.Column, values []parsing.Expr) ([]Param, error) {
+func inferInsertParams(columns []ir.Column, values []parsing.Expr) ([]Param, error) {
 	// todo: handling for typechecking literal.Body, and for type inferring binary expressions
 	if len(columns) != len(values) {
 		return []Param{}, fmt.Errorf("mismatch between amount of columns and amount of values in INSERT INTO statement")
