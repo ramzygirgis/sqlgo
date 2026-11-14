@@ -30,3 +30,7 @@ func validateFunctionName(name string) (string, error) {
 	}
 	return name, nil
 }
+
+func IsAnnotation(tk TokenKind) bool {
+	return tk == OneAnnotation || tk == ManyAnnotation || tk == ExecAnnotation
+}
