@@ -19,6 +19,16 @@ func Lex(input string) ([]Token, error) {
 		switch {
 		case unicode.IsSpace(rune(b)):
 			i++
+		case b == '-' && i+1 < len(input) && input[i+1] == '-':
+			tok, end, hasToken, err := lexQueryAnnotation(input, i)
+			if err != nil {
+				return nil, err
+			}
+			i = end
+			if !hasToken {
+				continue
+			}
+			toks = append(toks, tok)
 		case b == '\'':
 			tok, end, err := lexStringLiteral(input, i)
 			if err != nil {
@@ -53,6 +63,40 @@ func Lex(input string) ([]Token, error) {
 	}
 	toks = append(toks, Token{Kind: EOF, Body: "EOF"})
 	return toks, nil
+}
+
+func lexQueryAnnotation(input string, start int) (Token, int, bool, error) {
+	i := start + 2
+	end := strings.Index(input[i:], "\n")
+	if end == -1 {
+		end = len(input)
+	}
+	end += i
+	annotation := strings.Fields(input[i:end])
+	if len(annotation) == 0 {
+		return Token{}, end, false, nil
+	}
+	if annotation[0] != "name:" {
+		return Token{}, end, false, nil
+	}
+	if len(annotation) != 3 {
+		// this might be incorrect
+		return Token{}, 0, false, fmt.Errorf("incomplete query annotation")
+	}
+	name, err := validateFunctionName(annotation[1])
+	if err != nil {
+		return Token{}, 0, false, fmt.Errorf("invalid name in query annotation")
+	}
+	switch annotation[2] {
+	case ":one":
+		return Token{Kind: OneAnnotation, Body: name}, end, true, nil
+	case ":many":
+		return Token{Kind: ManyAnnotation, Body: name}, end, true, nil
+	case ":exec":
+		return Token{Kind: ExecAnnotation, Body: name}, end, true, nil
+	default:
+		return Token{}, 0, false, fmt.Errorf("unexpected query annotation cardinality %q", annotation[2])
+	}
 }
 
 func lexStringLiteral(input string, start int) (Token, int, error) {

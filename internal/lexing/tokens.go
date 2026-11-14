@@ -8,6 +8,9 @@ type TokenKind int
 
 const (
 	IllegalTokenKind TokenKind = iota
+	OneAnnotation              // Body <==> name
+	ManyAnnotation             // Body <==> name
+	ExecAnnotation             // Body <==> name
 	Identifier
 	Keyword
 	Comma
@@ -25,7 +28,8 @@ const (
 )
 
 func (tk TokenKind) String() string {
-	strings := [...]string{"IllegalTokenKind", "Identifier", "Keyword",
+	strings := [...]string{"IllegalTokenKind", "OneAnnotation",
+		"ManyAnnotation", "ExecAnnotation", "Identifier", "Keyword",
 		"Comma", "Number", "String", "Param", "Type",
 		"Comparator", "LParen", "RParen", "Star",
 		"Semicolon", "EOF", "OutOfBounds",
