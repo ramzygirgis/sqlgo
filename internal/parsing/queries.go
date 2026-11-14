@@ -17,7 +17,7 @@ const (
 
 func (c Cardinality) String() string {
 	strings := [...]string{
-		"One", "Many", "Exec",
+		"IllegalCardinality", "One", "Many", "Exec",
 	}
 	if c < 0 || int(c) >= len(strings) {
 		return fmt.Sprintf("Cardinality(%d)", c)
@@ -31,9 +31,8 @@ type Annotation struct {
 }
 
 type AnnotatedQuery struct {
-	Name        string
-	Cardinality Cardinality
-	Statement   *Statement
+	Annotation Annotation
+	Statement  *Statement
 }
 
 func (p *parser) expectAnnotation() (Annotation, error) {
@@ -71,14 +70,9 @@ func (p *parser) ParseQuery() (*AnnotatedQuery, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = p.expectKind(lexing.EOF)
-	if err != nil {
-		return nil, err
-	}
 	return &AnnotatedQuery{
-		Name:        annotation.Name,
-		Cardinality: annotation.Cardinality,
-		Statement:   &statement,
+		Annotation: annotation,
+		Statement:  &statement,
 	}, nil
 }
 
@@ -88,19 +82,24 @@ func ParseQueries(query string) ([]*AnnotatedQuery, error) {
 		return nil, err
 	}
 	if len(toks) == 0 {
-		return []*AnnotatedQuery{}, nil
+		return nil, fmt.Errorf("empty token stream")
 	}
 	p := parser{
 		toks: toks,
 		pos:  0,
 	}
+	var seenFunctionNames map[string]struct{}
 	var annotatedQueries []*AnnotatedQuery
 	for p.read().Kind != lexing.EOF && p.read().Kind != lexing.OutOfBounds {
 		query, err := p.ParseQuery()
 		if err != nil {
 			return nil, err
 		}
+		if _, ok := seenFunctionNames[query.Annotation.Name]; ok {
+			return nil, fmt.Errorf("query %q appears more than once", query.Annotation.Name)
+		}
 		annotatedQueries = append(annotatedQueries, query)
+		seenFunctionNames[query.Annotation.Name] = struct{}{}
 	}
 
 	return annotatedQueries, nil
