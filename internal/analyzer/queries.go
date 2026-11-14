@@ -11,17 +11,9 @@ import (
 func AnalyzeQuery(cat *catalog.Catalog, statement parsing.Statement) (*ir.Query, error) {
 	switch s := statement.(type) {
 	case *parsing.SelectStatement:
-		query, err := handleSelect(cat, s)
-		if err != nil {
-			return nil, err
-		}
-		return query, nil
+		return handleSelect(cat, s)
 	case *parsing.InsertIntoStatement:
-		query, err := handleInsert(cat, s)
-		if err != nil {
-			return nil, err
-		}
-		return query, nil
+		return handleInsert(cat, s)
 	default:
 		return nil, fmt.Errorf("unsupported statement type %T", s)
 	}

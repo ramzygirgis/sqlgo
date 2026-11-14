@@ -14,10 +14,6 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 	if !ok {
 		return nil, fmt.Errorf("table %q does not exist", tableName)
 	}
-	// the following would be a catalog bug, not sure if we validate already
-	if tableName != table.Name {
-		return nil, fmt.Errorf("catalog maps %q to table %q", tableName, table.Name)
-	}
 
 	targetColumns, err := collectTargetColumns(table, s)
 	if err != nil {
@@ -25,7 +21,7 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 	}
 
 	// todo: combine these into one call
-	params, err := inferInsertParams(table, targetColumns, s.Values)
+	params, err := inferInsertParams(targetColumns, s.Values)
 	if err != nil {
 		return nil, err
 	}
@@ -64,16 +60,16 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 		}
 	}
 
-	var resultColumns []ir.Column
+	var targetColumns []ir.Column
 	for _, col := range columns {
 		irCol, err := toIRColumn(table.Name, col)
 		if err != nil {
 			return nil, err
 		}
-		resultColumns = append(resultColumns, irCol)
+		targetColumns = append(targetColumns, irCol)
 	}
 
-	return resultColumns, nil
+	return targetColumns, nil
 }
 
 // extract parameters and validate values
