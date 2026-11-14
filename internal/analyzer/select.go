@@ -19,7 +19,7 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 		return nil, fmt.Errorf("table %q does not exist", tableName)
 	}
 
-	resultColumns, err := collectColumns(cat, s)
+	resultColumns, err := collectResultColumns(cat, s)
 	if err != nil {
 		return nil, err
 	}
@@ -40,12 +40,13 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 		Kind:          ir.Select,
 		TargetTable:   tableName,
 		Parameters:    parameters,
+		TargetColumns: []ir.Column{},
 		ResultColumns: resultColumns,
 		Sql:           expandedSqlString(s, resultColumns),
 	}, nil
 }
 
-func collectColumns(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Column, error) {
+func collectResultColumns(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Column, error) {
 	tableName := s.From.TableName
 	table, ok := cat.Tables[tableName]
 	if !ok {
@@ -84,40 +85,6 @@ func collectColumns(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Colu
 	return resultColumns, nil
 }
 
-func validateParameters(params []Param) ([]ir.Parameter, error) {
-	indexToParam := make(map[int]ir.Parameter)
-	maxIndexSoFar := 0
-	for _, param := range params {
-		if param.index <= 0 {
-			return []ir.Parameter{}, fmt.Errorf("illegal parameter $%d: all parameter indices must be positive", param.index)
-		}
-		t, err := toSQLType(param.sqlType)
-		if err != nil {
-			return []ir.Parameter{}, err
-		}
-		if cur, ok := indexToParam[param.index]; ok {
-			if cur.SqlType != t {
-				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, t, cur.SqlType)
-			}
-		}
-		// by default, params in a select should not be nullable. (col = NULL is invalid)
-		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: false}
-		if param.index > maxIndexSoFar {
-			maxIndexSoFar = param.index
-		}
-	}
-	var res []ir.Parameter
-	for i := 1; i <= maxIndexSoFar; i++ {
-		p, ok := indexToParam[i]
-		if !ok {
-			return []ir.Parameter{}, fmt.Errorf("$%d missing", i)
-		}
-		res = append(res, p)
-
-	}
-	return res, nil
-}
-
 // returns a list of params. not deduped -- one should process the result of this
 // to look for duplicates, and ensure that no duplicates contract eachother.
 func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
@@ -129,7 +96,7 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 			if !ok {
 				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef.Name, table.Name)
 			}
-			param := Param{index: paramRef.Index, sqlType: col.SqlType}
+			param := Param{index: paramRef.Index, sqlType: col.SqlType, nullable: false}
 			return []Param{param}, nil
 		}
 		whereLeft, err := walkWhere(table, t.Left)

@@ -33,7 +33,7 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 			}
 		}
 		// by default, params in a select should not be nullable. (col = NULL is invalid)
-		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: false}
+		indexToParam[param.index] = ir.Parameter{Index: param.index, SqlType: t, Nullable: param.nullable}
 		if param.index > maxIndexSoFar {
 			maxIndexSoFar = param.index
 		}
