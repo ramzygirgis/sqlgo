@@ -41,11 +41,11 @@ func (s *SelectStatement) String() string {
 }
 
 type FromKeyword struct {
-	tableName string
+	TableName string
 }
 
 func (s *FromKeyword) String() string {
-	return fmt.Sprintf(" FROM %s", s.tableName)
+	return fmt.Sprintf(" FROM %s", s.TableName)
 }
 
 func (p *parser) parseSelect() (*SelectStatement, error) {
@@ -111,7 +111,7 @@ func (p *parser) parseFrom() (*FromKeyword, error) {
 	}
 	table := p.next()
 	from := FromKeyword{
-		tableName: table.Body,
+		TableName: table.Body,
 	}
 	return &from, nil
 }

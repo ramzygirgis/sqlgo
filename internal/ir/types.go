@@ -52,6 +52,7 @@ type Query struct {
 	Kind          QueryKind
 	TargetTable   string
 	Parameters    []Parameter
+	TargetColumns []Column
 	ResultColumns []Column
 	Sql           string
 }
@@ -77,9 +78,15 @@ func (q *Query) Validate() error {
 		if len(q.ResultColumns) == 0 {
 			return fmt.Errorf("SELECT statement has no result columns")
 		}
+		if len(q.TargetColumns) != 0 {
+			return fmt.Errorf("SELECT statement has target columns")
+		}
 	case Insert:
 		if len(q.ResultColumns) != 0 {
 			return fmt.Errorf("INSERT statement has a nonzero amount of result columns")
+		}
+		if len(q.TargetColumns) == 0 {
+			return fmt.Errorf("INSERT statement has no target columns")
 		}
 	default:
 		return fmt.Errorf("invalid query kind %s", q.Kind)
