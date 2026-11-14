@@ -31,8 +31,8 @@ type Annotation struct {
 }
 
 type AnnotatedQuery struct {
-	Annotation Annotation
-	Statement  *Statement
+	Annotation
+	Statement Statement
 }
 
 func (p *parser) expectAnnotation() (Annotation, error) {
@@ -72,7 +72,7 @@ func (p *parser) ParseQuery() (*AnnotatedQuery, error) {
 	}
 	return &AnnotatedQuery{
 		Annotation: annotation,
-		Statement:  &statement,
+		Statement:  statement,
 	}, nil
 }
 
@@ -88,18 +88,18 @@ func ParseQueries(query string) ([]*AnnotatedQuery, error) {
 		toks: toks,
 		pos:  0,
 	}
-	var seenFunctionNames map[string]struct{}
+	seenFunctionNames := make(map[string]struct{})
 	var annotatedQueries []*AnnotatedQuery
 	for p.read().Kind != lexing.EOF && p.read().Kind != lexing.OutOfBounds {
 		query, err := p.ParseQuery()
 		if err != nil {
 			return nil, err
 		}
-		if _, ok := seenFunctionNames[query.Annotation.Name]; ok {
-			return nil, fmt.Errorf("query %q appears more than once", query.Annotation.Name)
+		if _, ok := seenFunctionNames[query.Name]; ok {
+			return nil, fmt.Errorf("query %q appears more than once", query.Name)
 		}
 		annotatedQueries = append(annotatedQueries, query)
-		seenFunctionNames[query.Annotation.Name] = struct{}{}
+		seenFunctionNames[query.Name] = struct{}{}
 	}
 
 	return annotatedQueries, nil
