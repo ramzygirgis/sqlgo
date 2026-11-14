@@ -15,17 +15,21 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 	if !ok {
 		return nil, fmt.Errorf("table %q does not exist", tableName)
 	}
+	// the following would be a catalog bug, not sure if we validate already
+	if tableName != table.Name {
+		return nil, fmt.Errorf("catalog maps %q to table %q", tableName, table.Name)
+	}
 
-	targetColumns, err := collectTargetColumns(cat, s)
+	targetColumns, err := collectTargetColumns(table, s)
 	if err != nil {
 		return nil, err
 	}
-	err = validateValues(targetColumns, s.Values)
+
+	// todo: combine these into one call
+	params, err := inferInsertParams(table, targetColumns, s.Values)
 	if err != nil {
 		return nil, err
 	}
-
-	params := extractParameters(resultColumns, s)
 	parameters, err := validateParameters(params)
 	if err != nil {
 		return nil, err
@@ -33,28 +37,23 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 
 	return &ir.Query{
 		Kind:          ir.Insert,
-		TargetTable:   table,
+		TargetTable:   tableName,
 		Parameters:    parameters,
 		TargetColumns: targetColumns,
 		ResultColumns: []ir.Column{},
-		Sql:           "",
+		Sql:           s.String(),
 	}, nil
 }
 
 func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) ([]ir.Column, error) {
 	// potentially unnecessary check:
-	if len(s.ColumnNames) == 0 {
+	if len(s.Columns) == 0 {
 		return []ir.Column{}, fmt.Errorf("INSERT INTO statement contains no column references")
 	}
 
-	tableName := s.TableName
-	table, ok := cat.Tables[tableName]
-	if !ok {
-		return nil, fmt.Errorf("table %q does not exist", tableName)
-	}
 	seen := make(map[string]struct{})
 	var resultColumns []ir.Column
-	for _, colRef := range s.ColumnNames {
+	for _, colRef := range s.Columns {
 		// duplicate check
 		colName := colRef.Name
 		if _, ok := seen[colName]; ok {
@@ -64,9 +63,9 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 		// existence in table
 		col, ok := table.Column(colName)
 		if !ok {
-			return nil, fmt.Errorf("column %q does not exist in table %q", colName, tableName)
+			return nil, fmt.Errorf("column %q does not exist in table %q", colName, table.Name)
 		}
-		irCol, err := toIRColumn(tableName, *col)
+		irCol, err := toIRColumn(table.Name, *col)
 		if err != nil {
 			return nil, err
 		}
@@ -75,51 +74,50 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 	return resultColumns, nil
 }
 
-// extract parameters
-func extractParameters(table *catalog.Table, columns []ir.Column, values []parsing.Expr) ([]Param, error) {
+// extract parameters and validate values
+func inferInsertParams(table *catalog.Table, columns []ir.Column, values []parsing.Expr) ([]Param, error) {
+	// todo: handling for typechecking literal.Body, and for type inferring binary expressions
 	if len(columns) != len(values) {
 		return []Param{}, fmt.Errorf("mismatch between amount of columns and amount of values in INSERT INTO statement")
 	}
 	var params []Param
 	for i, value := range values {
-		if value.(type) == *parsing.Parameter {
-			parentColumn, ok := table.Column(columns[i].Name)
-			if !ok {
-				return []Param{}, fmt.Errorf("invalid column reference %q for table %q", columns[i].Name, table.Name)
-			}
-			param := Param{index: value.(*parsing.Parameter).Index, sqlType: parentColumn.SqlType, nullable: parentColumn.Nullable}
+		parentColumn, ok := table.Column(columns[i].Name)
+		if !ok {
+			return []Param{}, fmt.Errorf("invalid column reference %q for table %q", columns[i].Name, table.Name)
+		}
+		switch v := value.(type) {
+		case *parsing.Parameter:
+			param := Param{index: v.Index, sqlType: parentColumn.SqlType, nullable: parentColumn.Nullable}
 			params = append(params, param)
+		case *parsing.ColumnRef:
+			return []Param{}, fmt.Errorf("cannot pass column reference %q as a value in an INSERT INTO statement", v.Name)
+		case *parsing.BinaryExpr:
+			err := validateBinaryExpr(v, parentColumn)
+			if err != nil {
+				return []Param{}, err
+			}
+		case *parsing.Literal:
+			err := validateLiteral(v, parentColumn)
+			if err != nil {
+				return []Param{}, err
+			}
+		default:
+			return []Param{}, fmt.Errorf("unsupported expression type %T", v)
 		}
 	}
 	return params, nil
 }
 
-// later:
-// validate that all values have correct types
-// strat: for each column,
-// 1. check if it's in table
-// 2. check if i has a non-parameter value associated with it
-// 3. if it does, compare types, if possible... this is the weird part
-
-/*
-func validateValues(columns []ir.Column, values []parsing.Expr) error {
-	var params []Param
-	for _, value := range values {
-		if value.(type) == *parsing.Parameter {
-			continue
-		}
-		switch v := value.(type) {
-		case *parsing.Parameter:
-			continue
-		case *parsing.ColumnRef:
-			return fmt.Errorf("column referenced as a value")
-		case *parsing.BinaryExpr:
-			d
-		case *parsing.Literal:
-
-		default:
-
-		}
+func validateLiteral(l *parsing.Literal, column *catalog.Column) error {
+	// todo: compare value's type with column's type, such as
+	// - if a literal is castable
+	if l.Body == "NULL" && !column.Nullable {
+		return fmt.Errorf("NULL cannot be inserted into %q, as this column is not nullable", column.Name)
 	}
+	return nil
 }
-*/
+
+func validateBinaryExpr(b *parsing.BinaryExpr, column *catalog.Column) error {
+	return fmt.Errorf("unsupported expression in VALUES; probably needs to be evaluated")
+}
