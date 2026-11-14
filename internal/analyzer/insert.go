@@ -20,6 +20,10 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 	if err != nil {
 		return nil, err
 	}
+	err = validateValues(targetColumns, s.Values)
+	if err != nil {
+		return nil, err
+	}
 
 	params := extractParameters(resultColumns, s)
 	parameters, err := validateParameters(params)
@@ -28,12 +32,12 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 	}
 
 	return &ir.Query{
-		Kind: ir.Insert,
-		TargetTable: table,
-		Parameters: parameters,
+		Kind:          ir.Insert,
+		TargetTable:   table,
+		Parameters:    parameters,
 		TargetColumns: targetColumns,
 		ResultColumns: []ir.Column{},
-		Sql: "",
+		Sql:           "",
 	}, nil
 }
 
@@ -71,50 +75,51 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 	return resultColumns, nil
 }
 
-
 // extract parameters
-func extractParameters(columns []ir.Column, s *parsing.InsertIntoStatement) []Param {
+func extractParameters(table *catalog.Table, columns []ir.Column, values []parsing.Expr) ([]Param, error) {
+	if len(columns) != len(values) {
+		return []Param{}, fmt.Errorf("mismatch between amount of columns and amount of values in INSERT INTO statement")
+	}
 	var params []Param
 	for i, value := range values {
 		if value.(type) == *parsing.Parameter {
-			parentColumn := columns[i]
-			param := Param{index: v.Index, sqlType: parentColumn.SqlType, nullable: parentColumn.Nullable}
+			parentColumn, ok := table.Column(columns[i].Name)
+			if !ok {
+				return []Param{}, fmt.Errorf("invalid column reference %q for table %q", columns[i].Name, table.Name)
+			}
+			param := Param{index: value.(*parsing.Parameter).Index, sqlType: parentColumn.SqlType, nullable: parentColumn.Nullable}
 			params = append(params, param)
 		}
 	}
-	return params
+	return params, nil
 }
 
-// validate params:
-// call validateParams lol
-
+// later:
 // validate that all values have correct types
 // strat: for each column,
 // 1. check if it's in table
 // 2. check if i has a non-parameter value associated with it
 // 3. if it does, compare types, if possible... this is the weird part
 
-
-
-func parseValues(table catalog.Table, values []parsing.Expr) ([]ir.Parameter, []ir.Values) {
+/*
+func validateValues(columns []ir.Column, values []parsing.Expr) error {
 	var params []Param
 	for _, value := range values {
+		if value.(type) == *parsing.Parameter {
+			continue
+		}
 		switch v := value.(type) {
 		case *parsing.Parameter:
-			// prob skip????
-		case *parsing.BinaryExpr:
+			continue
 		case *parsing.ColumnRef:
+			return fmt.Errorf("column referenced as a value")
+		case *parsing.BinaryExpr:
+			d
 		case *parsing.Literal:
+
 		default:
 
 		}
 	}
 }
-
-
-what i need to do:
-
-get TableName
-get Parameters from VALUES ( ... , ... , ... , ... )
---> 
-get ResultColumns from ( ... , ... , ... , ... )
+*/
