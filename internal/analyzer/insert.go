@@ -2,7 +2,6 @@ package analyzer
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/ramzygirgis/sqlgo/internal/catalog"
 	"github.com/ramzygirgis/sqlgo/internal/ir"
