@@ -80,7 +80,7 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 func inferInsertParams(columns []ir.Column, values []parsing.Expr) ([]Param, error) {
 	// todo: handling for typechecking literal.Body, and for type inferring binary expressions
 	if len(columns) != len(values) {
-		return []Param{}, fmt.Errorf("mismatch between amount of columns and amount of values in INSERT INTO statement")
+		return []Param{}, fmt.Errorf("INSERT INTO has %d column references, but %d values", len(columns), len(values))
 	}
 	var params []Param
 	for i, value := range values {
