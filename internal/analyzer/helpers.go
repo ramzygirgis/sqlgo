@@ -25,7 +25,7 @@ func validateParameters(params []Param) ([]ir.Parameter, error) {
 		}
 		if cur, ok := indexToParam[param.index]; ok {
 			if cur.SqlType != param.sqlType {
-				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, cur.SqlType)
+				return []ir.Parameter{}, fmt.Errorf("type mismatch for parameter %d (%s and %s)", param.index, cur.SqlType, param.sqlType)
 			}
 		}
 		// by default, params in a select should not be nullable. (col = NULL is invalid)
