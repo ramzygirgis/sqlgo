@@ -59,13 +59,14 @@ func (p *parser) parseColumnRef() (string, bool, error) {
 // Literals
 
 type Literal struct {
-	body string
+	// maybe this should actually be typed as a union, or we should attach a type field.
+	Body string
 }
 
 func (l *Literal) expressionMarker() {}
 
 func (l *Literal) String() string {
-	return l.body
+	return l.Body
 }
 
 // Parameters
