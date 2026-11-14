@@ -67,6 +67,49 @@ func TestLexKinds(t *testing.T) {
 				LParen, Number, Comma, Number, RParen,
 				Semicolon, EOF,
 			}},
+
+		// --- ordinary comments are skipped ---
+		{"comment only", `-- just a note`,
+			[]TokenKind{EOF}},
+		{"empty comment", `--`,
+			[]TokenKind{EOF}},
+		{"comment then query", "-- fetch users\nSELECT a FROM t;",
+			[]TokenKind{Keyword, Identifier, Keyword, Identifier, Semicolon, EOF}},
+		{"comment at end of line mid-query", "SELECT a -- the a column\nFROM t;",
+			[]TokenKind{Keyword, Identifier, Keyword, Identifier, Semicolon, EOF}},
+		{"comment at EOF without newline", "SELECT a FROM t; -- done",
+			[]TokenKind{Keyword, Identifier, Keyword, Identifier, Semicolon, EOF}},
+		{"several comments in a row", "-- one\n-- two\n-- three\na",
+			[]TokenKind{Identifier, EOF}},
+		{"comment mentioning name later", "-- this is not a name: annotation\na",
+			[]TokenKind{Identifier, EOF}},
+		{"dashes inside a string are not a comment", `'a -- b'`,
+			[]TokenKind{String, EOF}},
+
+		// --- annotations ---
+		{"one annotation", "-- name: GetUser :one\nSELECT a FROM t;",
+			[]TokenKind{OneAnnotation, Keyword, Identifier, Keyword, Identifier, Semicolon, EOF}},
+		{"many annotation", "-- name: ListUsers :many\nSELECT a FROM t;",
+			[]TokenKind{ManyAnnotation, Keyword, Identifier, Keyword, Identifier, Semicolon, EOF}},
+		{"exec annotation", "-- name: CreateUser :exec\nINSERT INTO t VALUES (1);",
+			[]TokenKind{
+				ExecAnnotation, Keyword, Keyword, Identifier, Keyword,
+				LParen, Number, RParen, Semicolon, EOF,
+			}},
+		{"annotation with extra spacing", "--   name:   GetUser   :one  \na",
+			[]TokenKind{OneAnnotation, Identifier, EOF}},
+		{"annotation at EOF without newline", "-- name: GetUser :one",
+			[]TokenKind{OneAnnotation, EOF}},
+		{"comment before annotation", "-- fetches a user\n-- name: GetUser :one\na",
+			[]TokenKind{OneAnnotation, Identifier, EOF}},
+		{"two annotated queries", "-- name: A :one\nSELECT a FROM t;\n\n-- name: B :many\nSELECT b FROM t;",
+			[]TokenKind{
+				OneAnnotation, Keyword, Identifier, Keyword, Identifier, Semicolon,
+				ManyAnnotation, Keyword, Identifier, Keyword, Identifier, Semicolon,
+				EOF,
+			}},
+		{"annotation not at start of file", "SELECT a FROM t;\n-- name: B :one\nb",
+			[]TokenKind{Keyword, Identifier, Keyword, Identifier, Semicolon, OneAnnotation, Identifier, EOF}},
 	}
 
 	for _, tt := range tests {
@@ -102,6 +145,13 @@ func TestLexBodies(t *testing.T) {
 		{"escaped quote kept raw", `'O''Brien'`, []string{"'O''Brien'"}},
 		{"param keeps dollar", `$12`, []string{"$12"}},
 		{"insert keywords uppercased", `insert into t values`, []string{"INSERT", "INTO", "t", "VALUES"}},
+
+		// --- annotations: body is the function name ---
+		{"annotation body is the name", "-- name: GetUser :one", []string{"GetUser"}},
+		{"annotation name keeps case", "-- name: listAllUsers :many", []string{"listAllUsers"}},
+		{"annotation name with digits and underscore", "-- name: Get_User2 :exec", []string{"Get_User2"}},
+		{"two annotations", "-- name: A :one\na;\n-- name: B :many\nb;", []string{"A", "a", ";", "B", "b", ";"}},
+		{"comment body is not emitted", "-- hello world\nx", []string{"x"}},
 	}
 
 	for _, tt := range tests {
@@ -139,13 +189,31 @@ func TestLexErrors(t *testing.T) {
 		{"letters glued to param", `$1abc`},
 		{"lone bang", `!`},
 		{"non-ascii outside string", `café`},
+
+		// --- dashes ---
+		{"single dash", `-`},
+		{"single dash before word", `-a`},
+
+		// --- malformed annotations ---
+		{"annotation missing cardinality", "-- name: GetUser\na"},
+		{"annotation missing name", "-- name: :one\na"},
+		{"annotation with only name:", "-- name:\na"},
+		{"annotation unknown cardinality", "-- name: GetUser :all\na"},
+		{"annotation cardinality without colon", "-- name: GetUser one\na"},
+		{"annotation extra field", "-- name: GetUser :one extra\na"},
+		{"annotation name with dash", "-- name: Get-User :one\na"},
+		{"annotation name with dot", "-- name: users.Get :one\na"},
+		{"annotation name starts with digit", "-- name: 2GetUser :one\na"},
+		// Fails until "is this an annotation?" is decided by a `name:` prefix
+		// rather than an exact first field.
+		{"annotation missing space after name:", "-- name:GetUser :one\na"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			toks, err := Lex(tt.input)
 			if err == nil {
-				t.Errorf("expected an error, got none\ninput: %s\ntokens: %v", tt.input, toks)
+				t.Errorf("expected an error, got none\ninput: %q\ntokens: %v", tt.input, toks)
 			}
 		})
 	}

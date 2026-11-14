@@ -70,15 +70,15 @@ func lexQueryAnnotation(input string, start int) (Token, int, bool, error) {
 	end := strings.Index(input[i:], "\n")
 	if end == -1 {
 		end = len(input)
+	} else {
+		end += i
 	}
-	end += i
-	annotation := strings.Fields(input[i:end])
-	if len(annotation) == 0 {
+	annotationStr := input[i:end]
+	if !strings.HasPrefix(strings.TrimSpace(annotationStr), "name:") {
+		// this means that the string is a comment
 		return Token{}, end, false, nil
 	}
-	if annotation[0] != "name:" {
-		return Token{}, end, false, nil
-	}
+	annotation := strings.Fields(annotationStr)
 	if len(annotation) != 3 {
 		// this might be incorrect
 		return Token{}, 0, false, fmt.Errorf("incomplete query annotation")
