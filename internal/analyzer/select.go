@@ -19,7 +19,7 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 		return nil, fmt.Errorf("table %q does not exist", tableName)
 	}
 
-	resultColumns, err := collectResultColumns(cat, s)
+	resultColumns, err := collectResultColumns(table, s)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +46,8 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 	}, nil
 }
 
-func collectResultColumns(cat *catalog.Catalog, s *parsing.SelectStatement) ([]ir.Column, error) {
-	tableName := s.From.TableName
-	table, ok := cat.Tables[tableName]
-	if !ok {
-		return nil, fmt.Errorf("table %q does not exist", tableName)
-	}
+func collectResultColumns(table *catalog.Table, s *parsing.SelectStatement) ([]ir.Column, error) {
+	tableName := table.Name
 
 	var resultColumns []ir.Column
 	var colNames []string // * should be expanded

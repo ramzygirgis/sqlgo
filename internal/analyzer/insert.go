@@ -37,10 +37,12 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 	}, nil
 }
 
-func collectTargetColumns(cat *catalog.Catalog, s *parsing.InsertIntoStatement) ([]ir.Column, error) {
+func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) ([]ir.Column, error) {
+	// potentially unnecessary check:
 	if len(s.ColumnNames) == 0 {
 		return []ir.Column{}, fmt.Errorf("INSERT INTO statement contains no column references")
 	}
+
 	tableName := s.TableName
 	table, ok := cat.Tables[tableName]
 	if !ok {
