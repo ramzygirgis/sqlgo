@@ -77,12 +77,6 @@ func TestValidateAccepts(t *testing.T) {
 			q.Cardinality = Many
 			return q
 		}()},
-		// Delete this case if you decide :exec on a SELECT should be rejected.
-		{"select :exec", func() Query {
-			q := validSelect()
-			q.Cardinality = Exec
-			return q
-		}()},
 		{"insert :exec", validInsert()},
 	}
 
@@ -194,6 +188,9 @@ func TestValidateRejects(t *testing.T) {
 		{"insert :many", func(q *Query) {
 			q.Cardinality = Many
 		}, validInsert},
+		{"select :exec", func(q *Query) {
+			q.Cardinality = Exec
+		}, validSelect},
 	}
 
 	for _, tt := range tests {

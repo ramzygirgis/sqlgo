@@ -9,19 +9,19 @@ func (q *Query) Validate() error {
 		if param.Index != i+1 {
 			return fmt.Errorf("parameter indexing must be ordered and contiguous from 1-N: expected $%d, got $%d", i+1, param.Index)
 		}
-		if param.SqlType == IllegalSQLType {
-			return fmt.Errorf("invalid SQL type for parameter $%d", param.Index)
+		if param.SqlType != TypeText && param.SqlType != TypeInt {
+			return fmt.Errorf("invalid SQL type %s for parameter $%d", param.SqlType, param.Index)
 		}
 	}
 
 	for _, col := range q.ResultColumns {
-		if col.SqlType == IllegalSQLType {
-			return fmt.Errorf("invalid SQL type for column %s", col.Name)
+		if col.SqlType != TypeText && col.SqlType != TypeInt {
+			return fmt.Errorf("invalid SQL type %s for column %s", col.SqlType, col.Name)
 		}
 	}
 	for _, col := range q.TargetColumns {
-		if col.SqlType == IllegalSQLType {
-			return fmt.Errorf("invalid SQL type for column %s", col.Name)
+		if col.SqlType != TypeText && col.SqlType != TypeInt {
+			return fmt.Errorf("invalid SQL type %s for column %s", col.SqlType, col.Name)
 		}
 	}
 
