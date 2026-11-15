@@ -25,7 +25,7 @@ func (t GoType) In(currentImportPath string) string {
 	return t.PackageName + "." + t.TypeName
 }
 
-func IRtoGoType(irType ir.SQLType, nullable bool) (GoType, error) {
+func IRToGoType(irType ir.SQLType, nullable bool) (GoType, error) {
 	switch irType {
 	case ir.TypeText:
 		if nullable {
