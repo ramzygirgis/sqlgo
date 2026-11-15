@@ -8,7 +8,7 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/parsing"
 )
 
-func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Query, error) {
+func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*UnannotatedQuery, error) {
 	tableName := s.TableName
 	table, ok := cat.Tables[tableName]
 	if !ok {
@@ -30,7 +30,7 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*ir.Que
 		return nil, err
 	}
 
-	return &ir.Query{
+	return &UnannotatedQuery{
 		Kind:          ir.Insert,
 		TargetTable:   tableName,
 		Parameters:    parameters,

@@ -9,3 +9,12 @@ type Param struct {
 	sqlType  ir.SQLType
 	nullable bool
 }
+
+type UnannotatedQuery struct {
+	Kind          ir.QueryKind
+	TargetTable   string
+	Parameters    []ir.Parameter
+	TargetColumns []ir.Column
+	ResultColumns []ir.Column
+	Sql           string
+}

@@ -12,7 +12,7 @@ import (
 // handleSelect resolves a SELECT against the catalog and produces an ir.Query.
 // The caller (Analyze's type switch) has already narrowed the statement to
 // *parsing.SelectStatement, so no second type assertion is needed here.
-func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, error) {
+func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*UnannotatedQuery, error) {
 	tableName := s.From.TableName
 	table, ok := cat.Tables[tableName]
 	if !ok {
@@ -36,7 +36,7 @@ func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*ir.Query, 
 		}
 	}
 
-	return &ir.Query{
+	return &UnannotatedQuery{
 		Kind:          ir.Select,
 		TargetTable:   tableName,
 		Parameters:    parameters,
