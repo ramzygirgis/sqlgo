@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"github.com/ramzygirgis/sqlgo/internal/ir"
+	"go/format"
 	"path"
 	"strings"
 )
@@ -37,7 +38,12 @@ func codegen(query *ir.Query, packageImportPath string, modelsImportPath string)
 	res := ""
 	res += fmt.Sprintf("const %s = `%s`\n\n", queryName(query), queryBody(query))
 	res += fmt.Sprintf("%s {\n\t%s\n}", funcContract, funcBody)
-	return res, nil
+
+	cleanedCode, err := format.Source([]byte(res))
+	if err != nil {
+		return "", err
+	}
+	return string(cleanedCode), nil
 }
 
 func queryBody(query *ir.Query) string {
@@ -76,9 +82,9 @@ func functionContract(query *ir.Query, packageImportPath string, modelsImportPat
 	returnTypeString := ""
 	switch query.Cardinality {
 	case ir.One:
-		returnTypeString += fmt.Sprintf("%s, error)", modelNameGo)
-	case ir.Many:
 		returnTypeString += fmt.Sprintf("(%s, error)", modelNameGo)
+	case ir.Many:
+		returnTypeString += fmt.Sprintf("([]%s, error)", modelNameGo)
 	case ir.Exec:
 		returnTypeString += "error"
 	default:
@@ -105,13 +111,14 @@ func functionBodyOne(query *ir.Query, packageImportPath string, modelsImportPath
 		res += fmt.Sprintf(", arg%d", param.Index)
 	}
 	res += ")\n\t"
-	res += "if err != nil {\n\t\treturn nil, err\n\t}\n\t"
+	res += fmt.Sprintf("if err != nil {\n\t\treturn %s{}, err\n\t}\n\t", modelNameGo)
 	res += "defer rows.Close()\n\t"
 	res += "if !rows.Next() {\n\t\t"
 	res += "if err := rows.Err(); err != nil {\n\t\t\t"
 	res += fmt.Sprintf("return %s{}, err\n\t\t", modelNameGo)
 	res += "}\n\t\t"
 	res += fmt.Sprintf("return %s{}, sql.ErrNoRows\n\t", modelNameGo)
+	res += "}\n\t"
 	res += fmt.Sprintf("var i %s\n\t", modelNameGo)
 	res += "if err := rows.Scan("
 	for i, col := range query.ResultColumns {
@@ -123,10 +130,10 @@ func functionBodyOne(query *ir.Query, packageImportPath string, modelsImportPath
 		}
 	}
 	res += "); err != nil {\n\t\t"
-	res += fmt.Sprintf("return models.%s{}, err\n\t", modelNameGo)
+	res += fmt.Sprintf("return %s{}, err\n\t", modelNameGo)
 	res += "}\n\t"
 	res += "if rows.Next() {\n\t\t"
-	res += fmt.Sprintf(`return models.%s{}, fmt.Errorf("%s: expected one row, got more")\n\t`, modelNameGo, functionName(query))
+	res += fmt.Sprintf(`return %s{}, fmt.Errorf("%s: expected one row, got more")`+"\n\t", modelNameGo, functionName(query))
 	res += "}\n\t"
 	res += "return i, rows.Err()"
 
@@ -164,7 +171,7 @@ func functionBodyMany(query *ir.Query, packageImportPath string, modelsImportPat
 		}
 	}
 	res += "); err != nil {\n\t\t\t"
-	res += fmt.Sprintf("return models.%s{}, err\n\t\t", modelNameGo)
+	res += "return nil, err\n\t\t"
 	res += "}\n\t\t"
 	res += "items = append(items, i)\n\t"
 	res += "}\n\t"
