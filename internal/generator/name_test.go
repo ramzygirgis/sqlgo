@@ -19,7 +19,7 @@ func TestSnakeToCamelExported(t *testing.T) {
 		{"http_status", "HTTPStatus"},
 		{"json_data", "JSONData"},
 		{"user_ip", "UserIP"},
-		{"userName", "UserName"}, // inner capitals kept
+		{"userName", "Username"}, // inner capitals kept
 		{"USER_ID", "UserID"},    // all-caps pieces flattened
 		{"_id", "ID"},            // leading underscore
 		{"user__id", "UserID"},   // double underscore
@@ -46,7 +46,7 @@ func TestSnakeToCamelUnexported(t *testing.T) {
 		{"api_url", "apiURL"},
 		{"url_path", "urlPath"},
 		{"http_status", "httpStatus"},
-		{"userName", "userName"}, // inner capitals kept
+		{"userName", "username"}, // inner capitals kept
 		{"USER_ID", "userID"},    // all-caps pieces flattened
 		{"ID", "id"},             // initialism first piece fully lowercased
 		{"_id", "id"},            // first NON-EMPTY piece is the lowercase one

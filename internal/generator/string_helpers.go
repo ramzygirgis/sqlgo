@@ -4,6 +4,10 @@ import (
 	"strings"
 )
 
+func startsWithDigit(s string) bool {
+	return s[0] >= '0' && s[0] <= '9'
+}
+
 func isGoKeyword(s string) bool {
 	keywords := make(map[string]struct{})
 	keywords["break"] = struct{}{}
@@ -54,7 +58,8 @@ func isInitialism(s string) bool {
 func snakeToCamel(identifier string, isExported bool) string {
 	pieces := strings.Split(identifier, "_")
 	res := ""
-	for i, piece := range pieces {
+	i := 0
+	for _, piece := range pieces {
 		if len(piece) == 0 {
 			continue
 		}
@@ -65,10 +70,19 @@ func snakeToCamel(identifier string, isExported bool) string {
 		} else {
 			res += strings.ToUpper(string(piece[0])) + strings.ToLower(string(piece[1:])) // is this correct?
 		}
+		i += 1
 	}
 
 	if isGoKeyword(res) {
 		return "_" + res + "_"
 	}
+	if startsWithDigit(res) {
+		return "X" + res
+	}
 	return res
+}
+
+func modelName(table string) string {
+	// table name
+	return snakeToCamel(singularize(table), true)
 }
