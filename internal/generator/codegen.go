@@ -9,9 +9,28 @@ import (
 	"strings"
 )
 
-func codegen(query *ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
-	importString := getImportString(query, packageImportPath, modelsImportPath)
+func generateFile(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
+	importString, err := getImportString(queries, packageImportPath, modelsImportPath)
+	if err != nil {
+		return "", err
+	}
+	rawCode := importString
 
+	for _, query := range queries {
+		generatedCode, err := generateQuery(query, packageImportPath, modelsImportPath)
+		if err != nil {
+			return "", err
+		}
+		rawCode += fmt.Sprintf("\n\n%s", generatedCode)
+	}
+	cleanedCode, err := format.Source([]byte(rawCode))
+	if err != nil {
+		return "", fmt.Errorf("file generation generated invalid Go: %w\n%s", err, rawCode)
+	}
+	return string(cleanedCode), nil
+}
+
+func generateQuery(query *ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
 	funcContract, err := functionContract(query, packageImportPath, modelsImportPath)
 	if err != nil {
 		return "", err
@@ -39,13 +58,12 @@ func codegen(query *ir.Query, packageImportPath string, modelsImportPath string)
 	}
 
 	rawCode := ""
-	rawCode += fmt.Sprintf("%s\n\n", importString)
 	rawCode += fmt.Sprintf("const %s = `%s`\n\n", queryName(query), queryBody(query))
 	rawCode += fmt.Sprintf("%s {\n\t%s\n}", funcContract, funcBody)
 
 	cleanedCode, err := format.Source([]byte(rawCode))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s: generated invalid Go: %w\n%s", query.Name, err, rawCode)
 	}
 	return string(cleanedCode), nil
 }
@@ -63,40 +81,74 @@ func functionName(query *ir.Query) string {
 	return strings.ToUpper(string(query.Name[0])) + query.Name[1:]
 }
 
-func shouldImportSql(query *ir.Query) bool {
-
+func getParamImports(query *ir.Query, packageImportPath string) ([]string, error) {
+	var imports []string
+	for _, p := range query.Parameters {
+		t, err := IRToGoType(p.SqlType, p.Nullable)
+		if err != nil {
+			return nil, err
+		}
+		if t.ImportPath != "" && t.ImportPath != packageImportPath {
+			imports = append(imports, t.ImportPath)
+		}
+	}
+	return imports, nil
 }
 
-func getImportList(query *ir.Query, packageImportPath string, modelsImportPath string) []string {
+func getImportList(queries []*ir.Query, packageImportPath string, modelsImportPath string) ([]string, error) {
 	var imports = []string{"context"}
-	if query.Cardinality == ir.One {
-		imports = append(imports, "fmt")
+	for _, query := range queries {
+		if query.Cardinality == ir.One {
+			imports = append(imports, "fmt")
+			imports = append(imports, "database/sql")
+			break
+		}
 	}
 	if packageImportPath != modelsImportPath {
 		imports = append(imports, modelsImportPath)
 	}
-	if shouldImportSql(query) {
-		imports = append(imports, "database/sql")
+	for _, query := range queries {
+		paramImports, err := getParamImports(query, packageImportPath)
+		if err != nil {
+			return nil, err
+		}
+		imports = append(imports, paramImports...)
 	}
 	slices.Sort(imports)
-	return imports
+	imports = slices.Compact(imports)
+	return imports, nil
 }
 
-func getImportString(query *ir.Query, packageImportPath string, modelsImportPath string) string {
-	importList := getImportList(query, packageImportPath, modelsImportPath)
+func getImportString(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
+	importList, err := getImportList(queries, packageImportPath, modelsImportPath)
+	if err != nil {
+		return "", err
+	}
 	importString := "import (\n"
 	for _, i := range importList {
-		importString += fmt.Sprintf("\t%s\n", i)
+		importString += fmt.Sprintf(`\t"%s"\n`, i)
 	}
 	importString += ")"
-	return importString
+	return importString, nil
 }
 
 func functionContract(query *ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
 	// this guy writes func name(...) (... , ... , ...), but not the {.
 	// that, and the } is the job of the parent
 	// later, add support for smart naming function arguments
-	res := fmt.Sprintf("func %s(ctx context.Context, db models.DBTX", functionName(query))
+	dbtx := GoType{
+		TypeName:    "DBTX",
+		PackageName: path.Base(modelsImportPath),
+		ImportPath:  modelsImportPath,
+	}
+	dbtxNameGo := dbtx.In(packageImportPath)
+	modelType := GoType{
+		TypeName:    modelName(query.TargetTable),
+		PackageName: path.Base(modelsImportPath),
+		ImportPath:  modelsImportPath,
+	}
+	modelNameGo := modelType.In(packageImportPath)
+	res := fmt.Sprintf("func %s(ctx context.Context, db %s", functionName(query), dbtxNameGo)
 	for _, param := range query.Parameters {
 		goType, err := IRToGoType(param.SqlType, param.Nullable)
 		if err != nil {
@@ -106,12 +158,6 @@ func functionContract(query *ir.Query, packageImportPath string, modelsImportPat
 		res += fmt.Sprintf(", arg%d %s", param.Index, goTypeString)
 	}
 	res += ") "
-	modelType := GoType{
-		TypeName:    modelName(query.TargetTable),
-		PackageName: path.Base(modelsImportPath),
-		ImportPath:  modelsImportPath,
-	}
-	modelNameGo := modelType.In(packageImportPath)
 	returnTypeString := ""
 	switch query.Cardinality {
 	case ir.One:
