@@ -5,10 +5,13 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/ir"
 	"go/format"
 	"path"
+	"slices"
 	"strings"
 )
 
 func codegen(query *ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
+	importString := getImportString(query, packageImportPath, modelsImportPath)
+
 	funcContract, err := functionContract(query, packageImportPath, modelsImportPath)
 	if err != nil {
 		return "", err
@@ -35,11 +38,12 @@ func codegen(query *ir.Query, packageImportPath string, modelsImportPath string)
 		return "", fmt.Errorf("unexpected query cardinality %s", query.Cardinality)
 	}
 
-	res := ""
-	res += fmt.Sprintf("const %s = `%s`\n\n", queryName(query), queryBody(query))
-	res += fmt.Sprintf("%s {\n\t%s\n}", funcContract, funcBody)
+	rawCode := ""
+	rawCode += fmt.Sprintf("%s\n\n", importString)
+	rawCode += fmt.Sprintf("const %s = `%s`\n\n", queryName(query), queryBody(query))
+	rawCode += fmt.Sprintf("%s {\n\t%s\n}", funcContract, funcBody)
 
-	cleanedCode, err := format.Source([]byte(res))
+	cleanedCode, err := format.Source([]byte(rawCode))
 	if err != nil {
 		return "", err
 	}
@@ -57,6 +61,35 @@ func queryName(query *ir.Query) string {
 
 func functionName(query *ir.Query) string {
 	return strings.ToUpper(string(query.Name[0])) + query.Name[1:]
+}
+
+func shouldImportSql(query *ir.Query) bool {
+
+}
+
+func getImportList(query *ir.Query, packageImportPath string, modelsImportPath string) []string {
+	var imports = []string{"context"}
+	if query.Cardinality == ir.One {
+		imports = append(imports, "fmt")
+	}
+	if packageImportPath != modelsImportPath {
+		imports = append(imports, modelsImportPath)
+	}
+	if shouldImportSql(query) {
+		imports = append(imports, "database/sql")
+	}
+	slices.Sort(imports)
+	return imports
+}
+
+func getImportString(query *ir.Query, packageImportPath string, modelsImportPath string) string {
+	importList := getImportList(query, packageImportPath, modelsImportPath)
+	importString := "import (\n"
+	for _, i := range importList {
+		importString += fmt.Sprintf("\t%s\n", i)
+	}
+	importString += ")"
+	return importString
 }
 
 func functionContract(query *ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
