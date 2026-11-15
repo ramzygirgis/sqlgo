@@ -52,7 +52,7 @@ func (q *Query) Validate() error {
 			return fmt.Errorf("INSERT statement has no target columns")
 		}
 		if q.Cardinality != Exec {
-			return fmt.Errorf("INSERT statement can only have cardinality :exec")
+			return fmt.Errorf("INSERT statement can only have cardinality :exec -- got %s", q.Cardinality)
 		}
 	default:
 		return fmt.Errorf("invalid query kind %s", q.Kind)
