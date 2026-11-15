@@ -16,13 +16,13 @@ CREATE TABLE users (
 	bio TEXT
 );`
 
-// analyze builds a catalog from schema, parses query, and runs AnalyzeQuery.
-// Setup failures (bad schema, unparseable query) fail the test immediately,
-// since they mean the test input is wrong, not the analyzer.
-func analyze(t *testing.T, schema, query string) (*ir.Query, error) {
-	t.Helper()
+// testName is the query name used by the single-query helpers.
+const testName = "TestQuery"
 
-	stmts, err := parsing.ParseAll(schema)
+// buildCatalog parses schema and applies it to a fresh catalog.
+func buildCatalog(t *testing.T, schema string) *catalog.Catalog {
+	t.Helper()
+	stmts, err := parsing.ParseSchema(schema)
 	if err != nil {
 		t.Fatalf("schema parse error: %v", err)
 	}
@@ -30,12 +30,38 @@ func analyze(t *testing.T, schema, query string) (*ir.Query, error) {
 	if err := cat.ApplyAll(stmts); err != nil {
 		t.Fatalf("schema apply error: %v", err)
 	}
+	return cat
+}
 
-	stmt, err := parsing.Parse(query)
+// parseOne parses a single annotated query. Setup failures fail the test
+// immediately, since they mean the test input is wrong, not the analyzer.
+func parseOne(t *testing.T, annotated string) *parsing.AnnotatedQuery {
+	t.Helper()
+	qs, err := parsing.ParseQueries(annotated)
 	if err != nil {
-		t.Fatalf("query parse error: %v\nquery: %s", err, query)
+		t.Fatalf("query parse error: %v\ninput:\n%s", err, annotated)
 	}
-	return AnalyzeQuery(cat, stmt)
+	if len(qs) != 1 {
+		t.Fatalf("expected exactly 1 query, got %d", len(qs))
+	}
+	return qs[0]
+}
+
+// analyze annotates query as `-- name: TestQuery <card>` and analyzes it
+// against the users schema.
+func analyze(t *testing.T, query, card string) (*ir.Query, error) {
+	t.Helper()
+	cat := buildCatalog(t, usersSchema)
+	q := parseOne(t, "-- name: "+testName+" "+card+"\n"+query)
+	return AnalyzeQuery(cat, q)
+}
+
+// defaultCard picks the natural cardinality for a statement.
+func defaultCard(query string) string {
+	if strings.HasPrefix(strings.ToUpper(strings.TrimSpace(query)), "SELECT") {
+		return ":many"
+	}
+	return ":exec"
 }
 
 func normalize(s string) string {
@@ -219,7 +245,7 @@ func TestAnalyzeSuccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := analyze(t, usersSchema, tt.query)
+			q, err := analyze(t, tt.query, defaultCard(tt.query))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -227,6 +253,9 @@ func TestAnalyzeSuccess(t *testing.T) {
 				t.Errorf("result fails Validate(): %v", err)
 			}
 
+			if q.Name != testName {
+				t.Errorf("Name: got %q, want %q", q.Name, testName)
+			}
 			if q.Kind != tt.kind {
 				t.Errorf("Kind: got %v, want %v", q.Kind, tt.kind)
 			}
@@ -268,47 +297,89 @@ func checkParams(t *testing.T, got, want []ir.Parameter) {
 	}
 }
 
+/* ---------- cardinality ---------- */
+
+func TestAnalyzeCardinality(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+		card  string
+		want  ir.Cardinality
+	}{
+		{"select :one", `SELECT id FROM users WHERE id = $1;`, ":one", ir.One},
+		{"select :many", `SELECT id FROM users;`, ":many", ir.Many},
+		{"select star :one", `SELECT * FROM users WHERE id = $1;`, ":one", ir.One},
+		{"insert :exec", `INSERT INTO users (name) VALUES ($1);`, ":exec", ir.Exec},
+		{"insert without column list :exec", `INSERT INTO users VALUES ($1, $2, $3);`, ":exec", ir.Exec},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q, err := analyze(t, tt.query, tt.card)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if q.Cardinality != tt.want {
+				t.Errorf("Cardinality: got %v, want %v", q.Cardinality, tt.want)
+			}
+			if err := q.Validate(); err != nil {
+				t.Errorf("result fails Validate(): %v", err)
+			}
+		})
+	}
+}
+
 /* ---------- error cases ---------- */
 
 func TestAnalyzeErrors(t *testing.T) {
 	tests := []struct {
 		name        string
 		query       string
+		card        string   // empty means use defaultCard
 		errContains []string // case-insensitive
 	}{
 		// --- SELECT ---
-		{"select missing table", `SELECT * FROM posts;`, []string{"posts"}},
-		{"select missing column", `SELECT email FROM users;`, []string{"email"}},
-		{"select one good one bad column", `SELECT id, email FROM users;`, []string{"email"}},
-		{"where missing column", `SELECT id FROM users WHERE email = $1;`, []string{"email"}},
-		{"where missing column without params", `SELECT id FROM users WHERE email = 5;`, []string{"email"}},
-		{"where missing column nested", `SELECT id FROM users WHERE id = 1 AND (name = 'x' OR email = 'y');`, []string{"email"}},
-		{"conflicting param types", `SELECT id FROM users WHERE id = $1 AND name = $1;`, []string{"mismatch"}},
-		{"param compared to param", `SELECT id FROM users WHERE $1 = $2;`, []string{"$1"}},
-		{"param compared to literal", `SELECT id FROM users WHERE $1 = 5;`, []string{"$1"}},
-		{"bare param", `SELECT id FROM users WHERE $1;`, []string{"$1"}},
-		{"untyped param next to typed one", `SELECT id FROM users WHERE id = $1 AND $2 = 5;`, []string{"$2"}},
-		{"missing $1", `SELECT id FROM users WHERE id = $2;`, []string{"$1"}},
-		{"gap in params", `SELECT id FROM users WHERE id = $1 AND name = $3;`, []string{"$2"}},
+		{"select missing table", `SELECT * FROM posts;`, "", []string{"posts"}},
+		{"select missing column", `SELECT email FROM users;`, "", []string{"email"}},
+		{"select one good one bad column", `SELECT id, email FROM users;`, "", []string{"email"}},
+		{"where missing column", `SELECT id FROM users WHERE email = $1;`, "", []string{"email"}},
+		{"where missing column without params", `SELECT id FROM users WHERE email = 5;`, "", []string{"email"}},
+		{"where missing column nested", `SELECT id FROM users WHERE id = 1 AND (name = 'x' OR email = 'y');`, "", []string{"email"}},
+		{"conflicting param types", `SELECT id FROM users WHERE id = $1 AND name = $1;`, "", []string{"mismatch"}},
+		{"param compared to param", `SELECT id FROM users WHERE $1 = $2;`, "", []string{"$1"}},
+		{"param compared to literal", `SELECT id FROM users WHERE $1 = 5;`, "", []string{"$1"}},
+		{"bare param", `SELECT id FROM users WHERE $1;`, "", []string{"$1"}},
+		{"untyped param next to typed one", `SELECT id FROM users WHERE id = $1 AND $2 = 5;`, "", []string{"$2"}},
+		{"missing $1", `SELECT id FROM users WHERE id = $2;`, "", []string{"$1"}},
+		{"gap in params", `SELECT id FROM users WHERE id = $1 AND name = $3;`, "", []string{"$2"}},
 
 		// --- INSERT ---
-		{"insert missing table", `INSERT INTO posts VALUES (1);`, []string{"posts"}},
-		{"insert missing column", `INSERT INTO users (email) VALUES ($1);`, []string{"email"}},
-		{"insert duplicate column", `INSERT INTO users (id, id) VALUES ($1, $2);`, []string{"id"}},
-		{"insert too few values", `INSERT INTO users (id, name) VALUES ($1);`, []string{"2", "1"}},
-		{"insert too many values", `INSERT INTO users (id) VALUES ($1, $2);`, []string{"1", "2"}},
-		{"insert no column list, too few values", `INSERT INTO users VALUES ($1);`, []string{"3", "1"}},
-		{"insert column ref as value", `INSERT INTO users (id) VALUES (name);`, []string{"name"}},
-		{"insert missing $1", `INSERT INTO users (id) VALUES ($2);`, []string{"$1"}},
-		{"insert conflicting param types", `INSERT INTO users (id, name) VALUES ($1, $1);`, []string{"mismatch"}},
+		{"insert missing table", `INSERT INTO posts VALUES (1);`, "", []string{"posts"}},
+		{"insert missing column", `INSERT INTO users (email) VALUES ($1);`, "", []string{"email"}},
+		{"insert duplicate column", `INSERT INTO users (id, id) VALUES ($1, $2);`, "", []string{"id"}},
+		{"insert too few values", `INSERT INTO users (id, name) VALUES ($1);`, "", []string{"2", "1"}},
+		{"insert too many values", `INSERT INTO users (id) VALUES ($1, $2);`, "", []string{"1", "2"}},
+		{"insert no column list, too few values", `INSERT INTO users VALUES ($1);`, "", []string{"3", "1"}},
+		{"insert column ref as value", `INSERT INTO users (id) VALUES (name);`, "", []string{"name"}},
+		{"insert missing $1", `INSERT INTO users (id) VALUES ($2);`, "", []string{"$1"}},
+		{"insert conflicting param types", `INSERT INTO users (id, name) VALUES ($1, $1);`, "", []string{"mismatch"}},
+
+		// --- cardinality ---
+		{"insert :one", `INSERT INTO users (name) VALUES ($1);`, ":one", []string{"one"}},
+		{"insert :many", `INSERT INTO users (name) VALUES ($1);`, ":many", []string{"many"}},
+		{"select :exec", `SELECT id FROM users;`, ":exec", []string{"exec"}},
 
 		// --- unsupported ---
-		{"create table is not a query", `CREATE TABLE t (a INT);`, []string{"unsupported"}},
+		{"create table is not a query", `CREATE TABLE t (a INT);`, ":exec", []string{"unsupported"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := analyze(t, usersSchema, tt.query)
+			card := tt.card
+			if card == "" {
+				card = defaultCard(tt.query)
+			}
+			q, err := analyze(t, tt.query, card)
 			if err == nil {
 				t.Fatalf("expected an error, got none\nresult: %+v", q)
 			}
@@ -318,32 +389,105 @@ func TestAnalyzeErrors(t *testing.T) {
 					t.Errorf("error %q should mention %q", err, sub)
 				}
 			}
+			if !strings.HasPrefix(err.Error(), testName) {
+				t.Errorf("error %q should start with the query name %q", err, testName)
+			}
 		})
+	}
+}
+
+/* ---------- whole query files ---------- */
+
+func TestAnalyzeQueryFile(t *testing.T) {
+	cat := buildCatalog(t, usersSchema)
+	qs, err := parsing.ParseQueries(`
+-- name: GetUser :one
+SELECT * FROM users WHERE id = $1;
+
+-- name: ListUsers :many
+SELECT id, name FROM users;
+
+-- Insert a new user.
+-- name: CreateUser :exec
+INSERT INTO users (name, bio) VALUES ($1, $2);
+`)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+
+	want := []struct {
+		name   string
+		card   ir.Cardinality
+		kind   ir.QueryKind
+		params int
+	}{
+		{"GetUser", ir.One, ir.Select, 1},
+		{"ListUsers", ir.Many, ir.Select, 0},
+		{"CreateUser", ir.Exec, ir.Insert, 2},
+	}
+	if len(qs) != len(want) {
+		t.Fatalf("got %d queries, want %d", len(qs), len(want))
+	}
+
+	for i, w := range want {
+		q, err := AnalyzeQuery(cat, qs[i])
+		if err != nil {
+			t.Fatalf("query %d (%s): unexpected error: %v", i, w.name, err)
+		}
+		if q.Name != w.name {
+			t.Errorf("query %d: Name = %q, want %q", i, q.Name, w.name)
+		}
+		if q.Cardinality != w.card {
+			t.Errorf("query %d: Cardinality = %v, want %v", i, q.Cardinality, w.card)
+		}
+		if q.Kind != w.kind {
+			t.Errorf("query %d: Kind = %v, want %v", i, q.Kind, w.kind)
+		}
+		if len(q.Parameters) != w.params {
+			t.Errorf("query %d: %d params, want %d", i, len(q.Parameters), w.params)
+		}
+		if err := q.Validate(); err != nil {
+			t.Errorf("query %d: fails Validate(): %v", i, err)
+		}
+	}
+}
+
+func TestErrorNamesTheRightQuery(t *testing.T) {
+	cat := buildCatalog(t, usersSchema)
+	qs, err := parsing.ParseQueries(`
+-- name: GoodOne :many
+SELECT id FROM users;
+
+-- name: BrokenOne :many
+SELECT email FROM users;
+`)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+
+	if _, err := AnalyzeQuery(cat, qs[0]); err != nil {
+		t.Fatalf("GoodOne: unexpected error: %v", err)
+	}
+	_, err = AnalyzeQuery(cat, qs[1])
+	if err == nil {
+		t.Fatal("BrokenOne: expected an error, got none")
+	}
+	if !strings.HasPrefix(err.Error(), "BrokenOne") {
+		t.Errorf("error %q should start with %q", err, "BrokenOne")
 	}
 }
 
 /* ---------- AST is left untouched ---------- */
 
 func TestAnalyzeDoesNotMutateAST(t *testing.T) {
-	stmts, err := parsing.ParseAll(usersSchema)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cat := catalog.New()
-	if err := cat.ApplyAll(stmts); err != nil {
-		t.Fatal(err)
-	}
+	cat := buildCatalog(t, usersSchema)
+	q := parseOne(t, "-- name: All :many\nSELECT * FROM users;")
+	before := q.Statement.String()
 
-	stmt, err := parsing.Parse(`SELECT * FROM users;`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	before := stmt.String()
-
-	if _, err := AnalyzeQuery(cat, stmt); err != nil {
+	if _, err := AnalyzeQuery(cat, q); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if after := stmt.String(); after != before {
+	if after := q.Statement.String(); after != before {
 		t.Errorf("AnalyzeQuery modified the statement:\nbefore: %s\n after: %s", before, after)
 	}
 }

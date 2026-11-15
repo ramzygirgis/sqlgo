@@ -8,7 +8,7 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/parsing"
 )
 
-func AnalyzeQuery(cat *catalog.Catalog, q parsing.AnnotatedQuery) (*ir.Query, error) {
+func AnalyzeQuery(cat *catalog.Catalog, q *parsing.AnnotatedQuery) (*ir.Query, error) {
 	queryName := q.Name
 	cardinality, err := toIRCardinality(q.Cardinality)
 	if err != nil {
@@ -29,7 +29,7 @@ func AnalyzeQuery(cat *catalog.Catalog, q parsing.AnnotatedQuery) (*ir.Query, er
 	default:
 		return nil, fmt.Errorf("%s: unsupported statement type %T", queryName, s)
 	}
-	return &ir.Query{
+	query := &ir.Query{
 		Name:          queryName,
 		Cardinality:   cardinality,
 		Kind:          unannotatedQuery.Kind,
@@ -38,5 +38,9 @@ func AnalyzeQuery(cat *catalog.Catalog, q parsing.AnnotatedQuery) (*ir.Query, er
 		TargetColumns: unannotatedQuery.TargetColumns,
 		ResultColumns: unannotatedQuery.ResultColumns,
 		Sql:           unannotatedQuery.Sql,
-	}, nil
+	}
+	if err := query.Validate(); err != nil {
+		return nil, fmt.Errorf("%s: %s", queryName, err)
+	}
+	return query, nil
 }
