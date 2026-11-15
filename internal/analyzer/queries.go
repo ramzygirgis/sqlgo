@@ -9,28 +9,28 @@ import (
 )
 
 func AnalyzeQuery(cat *catalog.Catalog, q parsing.AnnotatedQuery) (*ir.Query, error) {
-	name := q.Name
+	queryName := q.Name
 	cardinality, err := toIRCardinality(q.Cardinality)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s", queryName, err)
 	}
 	var unannotatedQuery *UnannotatedQuery
 	switch s := q.Statement.(type) {
 	case *parsing.SelectStatement:
 		unannotatedQuery, err = handleSelect(cat, s)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %s", queryName, err)
 		}
 	case *parsing.InsertIntoStatement:
 		unannotatedQuery, err = handleInsert(cat, s)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %s", queryName, err)
 		}
 	default:
-		return nil, fmt.Errorf("unsupported statement type %T", s)
+		return nil, fmt.Errorf("%s: unsupported statement type %T", queryName, s)
 	}
 	return &ir.Query{
-		Name:          name,
+		Name:          queryName,
 		Cardinality:   cardinality,
 		Kind:          unannotatedQuery.Kind,
 		TargetTable:   unannotatedQuery.TargetTable,
