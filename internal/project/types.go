@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"path"
 	"strings"
 )
 
@@ -32,7 +33,7 @@ type Project struct {
 *
  */
 
-func ReadGoMod(fsys fs.FS) (string, error) {
+func getModulePath(fsys fs.FS) (string, error) {
 	data, err := fs.ReadFile(fsys, "go.mod")
 	if errors.Is(err, fs.ErrNotExist) {
 		return "", fmt.Errorf("no go.mod found")
@@ -56,4 +57,27 @@ func ReadGoMod(fsys fs.FS) (string, error) {
 		return modulePath, nil
 	}
 	return "", fmt.Errorf("no module declaration found in go.mod")
+}
+
+func findSchemaFiles(fsys fs.FS) ([]string, error) {
+	entries, err := fs.ReadDir(fsys, "schema")
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("no schema directory found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	var filenames []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".sql") || strings.HasSuffix(name, ".down.sql") {
+			continue
+		}
+		full := path.Join("schema", name)
+		filenames = append(filenames, full)
+	}
+	return filenames, nil
 }
