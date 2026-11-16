@@ -56,7 +56,7 @@ func collectResultColumns(table *catalog.Table, s *parsing.SelectStatement) ([]i
 			return []ir.Column{}, err
 		}
 		for _, col := range table.Columns {
-			irCol, err := toIRColumn(tableName, col)
+			irCol, err := ToIRColumn(tableName, col)
 			if err != nil {
 				return nil, err
 			}
@@ -70,7 +70,7 @@ func collectResultColumns(table *catalog.Table, s *parsing.SelectStatement) ([]i
 			if !ok {
 				return nil, fmt.Errorf("column %q does not exist in table %q", name, tableName)
 			}
-			irCol, err := toIRColumn(tableName, *col)
+			irCol, err := ToIRColumn(tableName, *col)
 			if err != nil {
 				return nil, err
 			}
@@ -92,7 +92,7 @@ func walkWhere(table *catalog.Table, where parsing.Expr) ([]Param, error) {
 			if !ok {
 				return []Param{}, fmt.Errorf("invalid column reference %s for table %s", colRef.Name, table.Name)
 			}
-			IRCol, err := toIRColumn(table.Name, *col)
+			IRCol, err := ToIRColumn(table.Name, *col)
 			if err != nil {
 				return []Param{}, err
 			}

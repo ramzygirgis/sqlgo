@@ -7,10 +7,10 @@ import (
 	"path"
 )
 
-func generateFile(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
+func generateQueriesFile(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
 	packageDeclaration := getPackageDeclaration(packageImportPath)
 
-	importString, err := getImportString(queries, packageImportPath, modelsImportPath)
+	importString, err := getImportStringQueries(queries, packageImportPath, modelsImportPath)
 	if err != nil {
 		return "", err
 	}

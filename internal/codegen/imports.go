@@ -6,9 +6,9 @@ import (
 	"slices"
 )
 
-func getParamImports(query *ir.Query, packageImportPath string) ([]string, error) {
+func getParamImports(params []ir.Parameter, packageImportPath string) ([]string, error) {
 	var imports []string
-	for _, p := range query.Parameters {
+	for _, p := range params {
 		t, err := IRToGoType(p.SqlType, p.Nullable)
 		if err != nil {
 			return nil, err
@@ -20,7 +20,7 @@ func getParamImports(query *ir.Query, packageImportPath string) ([]string, error
 	return imports, nil
 }
 
-func getImportList(queries []*ir.Query, packageImportPath string, modelsImportPath string) ([]string, error) {
+func getImportListQueries(queries []*ir.Query, packageImportPath string, modelsImportPath string) ([]string, error) {
 	var imports = []string{"context"}
 	for _, query := range queries {
 		if query.Cardinality == ir.One {
@@ -33,7 +33,7 @@ func getImportList(queries []*ir.Query, packageImportPath string, modelsImportPa
 		imports = append(imports, modelsImportPath)
 	}
 	for _, query := range queries {
-		paramImports, err := getParamImports(query, packageImportPath)
+		paramImports, err := getParamImports(query.Parameters, packageImportPath)
 		if err != nil {
 			return nil, err
 		}
@@ -44,8 +44,8 @@ func getImportList(queries []*ir.Query, packageImportPath string, modelsImportPa
 	return imports, nil
 }
 
-func getImportString(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
-	importList, err := getImportList(queries, packageImportPath, modelsImportPath)
+func getImportStringQueries(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
+	importList, err := getImportListQueries(queries, packageImportPath, modelsImportPath)
 	if err != nil {
 		return "", err
 	}

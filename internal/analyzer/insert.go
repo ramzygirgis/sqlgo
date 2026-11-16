@@ -62,7 +62,7 @@ func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) 
 
 	var targetColumns []ir.Column
 	for _, col := range columns {
-		irCol, err := toIRColumn(table.Name, col)
+		irCol, err := ToIRColumn(table.Name, col)
 		if err != nil {
 			return nil, err
 		}

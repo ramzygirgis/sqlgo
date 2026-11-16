@@ -8,7 +8,7 @@ import (
 )
 
 // this guy turns a catalog column into an IR column
-func toIRColumn(tableName string, col catalog.Column) (ir.Column, error) {
+func ToIRColumn(tableName string, col catalog.Column) (ir.Column, error) {
 	sqlType, err := toSQLType(col.SqlType)
 	if err != nil {
 		return ir.Column{}, fmt.Errorf("column %q in table %q: %w", col.Name, tableName, err)
