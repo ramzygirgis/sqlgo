@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/ramzygirgis/sqlgo/internal/ir"
 	"go/format"
-	"path"
 )
 
 func generateQueriesFile(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
@@ -31,9 +30,4 @@ func generateQueriesFile(queries []*ir.Query, packageImportPath string, modelsIm
 		return "", fmt.Errorf("file generation generated invalid Go: %w\n%s", err, rawCode)
 	}
 	return string(cleanedCode), nil
-}
-
-func getPackageDeclaration(packageImportPath string) string {
-	packageName := path.Base(packageImportPath)
-	return fmt.Sprintf("package %s", packageName)
 }
