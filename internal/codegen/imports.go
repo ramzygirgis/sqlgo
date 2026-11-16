@@ -15,18 +15,30 @@ func getGoTypeImports(t GoType, packageImportPath string) ([]string, error) {
 	return imports, nil
 }
 
-func getParamsImports(params []ir.Parameter, packageImportPath string) ([]string, error) {
-	var imports []string
-	for _, p := range params {
-		t, err := irToGoType(p.SqlType, p.Nullable)
-		if err != nil {
-			return nil, err
-		}
-		paramImports, err := getGoTypeImports(t, packageImportPath)
-		imports = append(imports, paramImports...)
+// get imports for a given column representation
+
+func getParamImports(param ir.Parameter, packageImportPath string) ([]string, error) {
+	t, err := irToGoType(param.SqlType, param.Nullable)
+	if err != nil {
+		return nil, err
 	}
-	return imports, nil
+	paramImports, err := getGoTypeImports(t, packageImportPath)
+	return paramImports, nil
 }
+
+func getColumnImports(table *catalog.Table, col catalog.Column, modelsImportPath string) ([]string, error) {
+	t, err := columnToGoType(table.Name, col)
+	if err != nil {
+		return nil, err
+	}
+	colImports, err := getGoTypeImports(t, modelsImportPath)
+	if err != nil {
+		return nil, err
+	}
+	return colImports, nil
+}
+
+// get imports for a list of a given column representation
 
 func getImportListQueries(queries []*ir.Query, packageImportPath string, modelsImportPath string) ([]string, error) {
 	var imports = []string{"context"}
@@ -41,11 +53,13 @@ func getImportListQueries(queries []*ir.Query, packageImportPath string, modelsI
 		imports = append(imports, modelsImportPath)
 	}
 	for _, query := range queries {
-		paramImports, err := getParamsImports(query.Parameters, packageImportPath)
-		if err != nil {
-			return nil, err
+		for _, param := range query.Parameters {
+			paramImports, err := getParamImports(param, packageImportPath)
+			if err != nil {
+				return nil, err
+			}
+			imports = append(imports, paramImports...)
 		}
-		imports = append(imports, paramImports...)
 	}
 	slices.Sort(imports)
 	imports = slices.Compact(imports)
@@ -56,21 +70,19 @@ func getImportListModels(catalog catalog.Catalog, modelsImportPath string) ([]st
 	var imports = []string{}
 	for _, table := range catalog.Tables {
 		for _, column := range table.Columns {
-			t, err := columnToGoType(table.Name, column)
-			if err != nil {
-				return nil, err
-			}
-			colImports, err := getGoTypeImports(t, modelsImportPath)
+			colImports, err := getColumnImports(table, column, modelsImportPath)
 			if err != nil {
 				return nil, err
 			}
 			imports = append(imports, colImports...)
 		}
 	}
-	imports = slices.Compact(imports)
 	slices.Sort(imports)
+	imports = slices.Compact(imports)
 	return imports, nil
 }
+
+// get imports for something high level (query, table)
 
 func getImportStringQueries(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
 	importList, err := getImportListQueries(queries, packageImportPath, modelsImportPath)
