@@ -82,6 +82,12 @@ func getImportListModels(catalog catalog.Catalog, modelsImportPath string) ([]st
 	return imports, nil
 }
 
+func getImportListDb() []string {
+	imports := []string{"database/sql", "context", "errors"}
+	slices.Sort(imports)
+	return imports
+}
+
 // get imports for something high level (query, table)
 
 func getImportStringQueries(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
@@ -91,7 +97,7 @@ func getImportStringQueries(queries []*ir.Query, packageImportPath string, model
 	}
 	importString := "import (\n"
 	for _, impStr := range importList {
-		importString += fmt.Sprintf(`\t"%s"\n`, impStr)
+		importString += fmt.Sprintf("\t%q\n", impStr)
 	}
 	importString += ")"
 	return importString, nil
@@ -104,8 +110,18 @@ func getImportStringModels(catalog catalog.Catalog, modelsImportPath string) (st
 	}
 	importString := "import (\n"
 	for _, impStr := range importList {
-		importString += fmt.Sprintf(`\t"%s"\n`, impStr)
+		importString += fmt.Sprintf("\t%q\n", impStr)
 	}
 	importString += ")"
 	return importString, nil
+}
+
+func getImportStringDb() string {
+	importList := getImportListDb()
+	importString := "import (\n"
+	for _, impStr := range importList {
+		importString += fmt.Sprintf("\t%q\n", impStr)
+	}
+	importString += ")"
+	return importString
 }

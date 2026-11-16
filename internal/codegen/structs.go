@@ -31,5 +31,6 @@ func generateColumn(table *catalog.Table, column catalog.Column) (string, error)
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("%s %s", goType.TypeName, goType), nil
+	goColName := snakeToCamel(column.Name, true)
+	return fmt.Sprintf("%s %s", goColName, goType), nil
 }
