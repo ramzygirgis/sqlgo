@@ -37,6 +37,39 @@ type Project struct {
 *
  */
 
+func findQueryPackage(fsys fs.FS, modulePath string) ([]Package, error) {
+	fn = func(p string, d fs.DirEntry, err error) error {
+		
+		var sqlFiles []string
+		if !d.IsDir() {
+			return nil
+		}
+		if d.Name() == "vendor" || d.Name() == "testdata" {
+			return fs.SkipDir
+		}
+		if strings.HasPrefix(d.Name(), ".") && d.Name() != "." {
+			return fs.SkipDir
+		}
+		if strings.HasPrefix(d.Name(), "_") {
+			return fs.SkipDir
+		}
+		if d.Name() == "schema" {
+			return fs.SkipDir
+		}
+		// check if there is a go.mod. if there is, we want to stop searching, cause this is a diff module
+		if _, err := fs.Stat(fsys, path.Join(p, "go.mod")); err == nil {
+			return
+		}
+		return Package{
+			Dir:
+			ImportPath: root
+			SqlFiles: sqlFiles,
+		}
+	}
+	fs.WalkDir(fsys, ".", fn)
+}
+
+
 func getModulePath(fsys fs.FS) (string, error) {
 	data, err := fs.ReadFile(fsys, "go.mod")
 	if errors.Is(err, fs.ErrNotExist) {
