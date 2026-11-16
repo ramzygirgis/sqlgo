@@ -57,3 +57,19 @@ func generateModelsFile(catalog catalog.Catalog, modelsImportPath string) (strin
 	}
 	return string(cleanedCode), nil
 }
+
+func generateDbFile(modelsImportPath string) (string, error) {
+	packageDeclaration := getPackageDeclaration(modelsImportPath)
+	importString := getImportStringDb()
+	DbTxInterfaceSource := _DbTxInterfaceSource()
+	TxStarterInterfaceSource := _TxStarterInterfaceSource()
+	errNotFound := _ErrNotFound()
+	InTxSource := _InTxSource()
+	rawCode := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s", packageDeclaration, importString,
+		DbTxInterfaceSource, TxStarterInterfaceSource, errNotFound, InTxSource)
+	cleanedCode, err := format.Source([]byte(rawCode))
+	if err != nil {
+		return "", err
+	}
+	return string(cleanedCode), nil
+}
