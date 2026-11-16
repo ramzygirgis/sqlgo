@@ -34,9 +34,7 @@ func generateQueriesFile(queries []*ir.Query, packageImportPath string, modelsIm
 }
 
 func generateModelsFile(catalog catalog.Catalog, modelsImportPath string) (string, error) {
-	// make sure that the below call is correct
 	packageDeclaration := getPackageDeclaration(modelsImportPath)
-	// make sure that the above call is correct
 	importString, err := getImportStringModels(catalog, modelsImportPath)
 	if err != nil {
 		return "", err
