@@ -14,6 +14,10 @@ func _TxStarterInterfaceSource() string {
 }`
 }
 
+func _ErrNotFound() string {
+	return `var ErrNotFound = sql.ErrNoRows`
+}
+
 func _InTxSource() string {
 	return `func InTx(ctx context.Context, db TxStarter, fn func(tx DBTX) error) error {
 	tx, err := db.BeginTx(ctx, nil)
