@@ -13,3 +13,6 @@ func (t *Table) Column(colName string) (*Column, bool) {
 	}
 	return nil, false
 }
+
+// todo: it's chopped to have this not be in types.go.
+// find a cleaner way to organize these files
