@@ -2,6 +2,8 @@ package codegen
 
 import (
 	"fmt"
+	"github.com/ramzygirgis/sqlgo/internal/analyzer"
+	"github.com/ramzygirgis/sqlgo/internal/catalog"
 	"github.com/ramzygirgis/sqlgo/internal/ir"
 )
 
@@ -25,7 +27,7 @@ func (t GoType) In(currentImportPath string) string {
 	return t.PackageName + "." + t.TypeName
 }
 
-func IRToGoType(irType ir.SQLType, nullable bool) (GoType, error) {
+func irToGoType(irType ir.SQLType, nullable bool) (GoType, error) {
 	switch irType {
 	case ir.TypeText:
 		if nullable {
@@ -58,4 +60,16 @@ func IRToGoType(irType ir.SQLType, nullable bool) (GoType, error) {
 	default:
 		return GoType{}, fmt.Errorf("Invalid SQLType %s", irType)
 	}
+}
+
+func columnToGoType(tableName string, column catalog.Column) (GoType, error) {
+	IRCol, err := analyzer.ToIRColumn(tableName, column)
+	if err != nil {
+		return GoType{}, err
+	}
+	goType, err := irToGoType(IRCol.SqlType, IRCol.Nullable)
+	if err != nil {
+		return GoType{}, err
+	}
+	return goType, nil
 }

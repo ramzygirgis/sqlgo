@@ -9,7 +9,7 @@ import (
 
 // mapType is the function under test. Rename the right-hand side if your
 // mapping function has a different name.
-var mapType = IRToGoType
+var mapType = irToGoType
 
 /* ---------- mapping ---------- */
 

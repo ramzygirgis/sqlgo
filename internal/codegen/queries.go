@@ -77,7 +77,7 @@ func functionContract(query *ir.Query, packageImportPath string, modelsImportPat
 	modelNameGo := modelType.In(packageImportPath)
 	res := fmt.Sprintf("func %s(ctx context.Context, db %s", functionName(query), dbtxNameGo)
 	for _, param := range query.Parameters {
-		goType, err := IRToGoType(param.SqlType, param.Nullable)
+		goType, err := irToGoType(param.SqlType, param.Nullable)
 		if err != nil {
 			return "", err
 		}

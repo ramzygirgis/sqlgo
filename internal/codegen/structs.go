@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"fmt"
-	"github.com/ramzygirgis/sqlgo/internal/analyzer"
 	"github.com/ramzygirgis/sqlgo/internal/catalog"
 )
 
@@ -28,16 +27,9 @@ func generateStructBody(table *catalog.Table) (string, error) {
 }
 
 func generateColumn(table *catalog.Table, column catalog.Column) (string, error) {
-	IRCol, err := analyzer.ToIRColumn(table.Name, column)
+	goType, err := columnToGoType(table.Name, column)
 	if err != nil {
 		return "", err
 	}
-
-	goName := snakeToCamel(IRCol.Name, IRCol.Nullable)
-	goType, err := IRToGoType(IRCol.SqlType, IRCol.Nullable)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%s %s", goName, goType), nil
+	return fmt.Sprintf("%s %s", goType.TypeName, goType), nil
 }
