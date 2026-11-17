@@ -4,7 +4,7 @@ import (
 	"io/fs"
 )
 
-func Discover(fsys fs.FS, modulePath string) (Project, error) {
+func Discover(fsys fs.FS) (Project, error) {
 	modulePath, err := getModulePath(fsys)
 	if err != nil {
 		return Project{}, err

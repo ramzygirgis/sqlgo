@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -30,8 +31,17 @@ func getModulePath(fsys fs.FS) (string, error) {
 		}
 		modulePath := fields[1]
 		// potentially have some validation for modulePath
+		//
+		if strings.HasPrefix(modulePath, `"`) || strings.HasPrefix(modulePath, "`") {
+			unquoted, err := strconv.Unquote(modulePath)
+			if err != nil {
+				return "", fmt.Errorf("go.mod: invalid module path %s: %w", modulePath, err)
+			}
+			modulePath = unquoted
+		}
 		return modulePath, nil
 	}
+
 	return "", fmt.Errorf("no module declaration found in go.mod")
 }
 
@@ -54,6 +64,9 @@ func findSchemaFiles(fsys fs.FS) ([]string, error) {
 		}
 		full := path.Join("schema", name)
 		filenames = append(filenames, full)
+	}
+	if len(filenames) == 0 {
+		return nil, fmt.Errorf("schema: no .sql files found (down migrations aren't included)")
 	}
 	return filenames, nil
 }
