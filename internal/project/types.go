@@ -38,8 +38,8 @@ type Project struct {
 *
  */
 
-func directoryHasFile(fsys fs.FS, d fs.DirEntry, targetFileName string) (bool, error) {
-	entries, err := fs.ReadDir(fsys, d.Name())
+func directoryHasFile(fsys fs.FS, curPath string, targetFileName string) (bool, error) {
+	entries, err := fs.ReadDir(fsys, curPath)
 	if err != nil {
 		return false, err
 	}
@@ -51,14 +51,14 @@ func directoryHasFile(fsys fs.FS, d fs.DirEntry, targetFileName string) (bool, e
 	return false, nil
 }
 
-func collectMatchingSuffixFiles(fsys fs.FS, d fs.DirEntry, targetFileEnding string, except string) ([]string, error) {
+func collectMatchingSuffixFiles(fsys fs.FS, curPath string, targetFileEnding string) ([]string, error) {
 	var matches []string
-	entries, err := fs.ReadDir(fsys, d.Name())
+	entries, err := fs.ReadDir(fsys, curPath)
 	if err != nil {
 		return nil, err
 	}
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), targetFileEnding) && !strings.HasSuffix(entry.Name(), except) {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), targetFileEnding) {
 			matches = append(matches, entry.Name())
 		}
 	}
@@ -66,36 +66,56 @@ func collectMatchingSuffixFiles(fsys fs.FS, d fs.DirEntry, targetFileEnding stri
 	return matches, nil
 }
 
-func findQueryPackage(fsys fs.FS, modulePath string) ([]Package, error) {
+func findQueryPackages(fsys fs.FS, modulePath string) ([]Package, error) {
 	var packages []Package
-	err := fs.WalkDir(fsys, modulePath, func(curPath string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, ".", func(curPath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if !d.IsDir() {
 			return nil
 		}
-		if d.Name() == "vendor" || d.Name() == "testdata" {
-			return fs.SkipDir
+
+		if curPath != "." {
+			if d.Name() == "vendor" || d.Name() == "testdata" {
+				return fs.SkipDir
+			}
+			if strings.HasPrefix(d.Name(), ".") || strings.HasPrefix(d.Name(), "_") {
+				return fs.SkipDir
+			}
+			if curPath == "schema" {
+				return fs.SkipDir
+			}
+			// if you have a go.mod, you're a separate module
+			hasGoMod, err := directoryHasFile(fsys, curPath, "go.mod")
+			if err != nil {
+				return err
+			}
+			if hasGoMod {
+				return fs.SkipDir
+			}
 		}
-		if d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
-			return fs.SkipDir
-		}
-		if strings.HasPrefix(d.Name(), "_") {
-			// skip
-		}
-		// if you have a go.mod, you should be exited, since new package
-		hasGoMod, err := directoryHasFile(fsys, d, "go.mod")
+
+		matches, err := collectMatchingSuffixFiles(fsys, curPath, ".sql")
 		if err != nil {
-			// is this correct?
 			return err
 		}
-		if d.Name() != "." && hasGoMod {
-			// skip
+		if len(matches) == 0 {
+			return nil
 		}
 
-		matches, err := collectMatchingSuffixFiles(fsys, d, ".sql", ".down.sql")
+		if curPath == "." {
+			return fmt.Errorf("%s: .sql files at the project root aren't supported; move them into a package directory",
+				strings.Join(matches, ", "))
+		}
+		if curPath == modelsDir {
+			return fmt.Errorf("%s: .sql files aren't allowed in %s, since that package is generated",
+				strings.Join(matches, ", "), modelsDir)
+		}
 
 		thisPackage := Package{
-			Dir:        d.Name(),
-			ImportPath: path.Join(curPath, d.Name()),
+			Dir:        curPath,
+			ImportPath: path.Join(modulePath, curPath),
 			SQLFiles:   matches,
 		}
 		packages = append(packages, thisPackage)
@@ -104,6 +124,10 @@ func findQueryPackage(fsys fs.FS, modulePath string) ([]Package, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	slices.SortFunc(packages, func(a, b Package) int {
+		return strings.Compare(a.Dir, b.Dir)
+	})
 	return packages, nil
 }
 
