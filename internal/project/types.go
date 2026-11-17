@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -37,38 +38,74 @@ type Project struct {
 *
  */
 
+func directoryHasFile(fsys fs.FS, d fs.DirEntry, targetFileName string) (bool, error) {
+	entries, err := fs.ReadDir(fsys, d.Name())
+	if err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if entry.Name() == targetFileName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func collectMatchingSuffixFiles(fsys fs.FS, d fs.DirEntry, targetFileEnding string, except string) ([]string, error) {
+	var matches []string
+	entries, err := fs.ReadDir(fsys, d.Name())
+	if err != nil {
+		return nil, err
+	}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), targetFileEnding) && !strings.HasSuffix(entry.Name(), except) {
+			matches = append(matches, entry.Name())
+		}
+	}
+	slices.Sort(matches)
+	return matches, nil
+}
+
 func findQueryPackage(fsys fs.FS, modulePath string) ([]Package, error) {
-	fn = func(p string, d fs.DirEntry, err error) error {
-		
-		var sqlFiles []string
+	var packages []Package
+	err := fs.WalkDir(fsys, modulePath, func(curPath string, d fs.DirEntry, err error) error {
 		if !d.IsDir() {
 			return nil
 		}
 		if d.Name() == "vendor" || d.Name() == "testdata" {
 			return fs.SkipDir
 		}
-		if strings.HasPrefix(d.Name(), ".") && d.Name() != "." {
+		if d.Name() != "." && strings.HasPrefix(d.Name(), ".") {
 			return fs.SkipDir
 		}
 		if strings.HasPrefix(d.Name(), "_") {
-			return fs.SkipDir
+			// skip
 		}
-		if d.Name() == "schema" {
-			return fs.SkipDir
+		// if you have a go.mod, you should be exited, since new package
+		hasGoMod, err := directoryHasFile(fsys, d, "go.mod")
+		if err != nil {
+			// is this correct?
+			return err
 		}
-		// check if there is a go.mod. if there is, we want to stop searching, cause this is a diff module
-		if _, err := fs.Stat(fsys, path.Join(p, "go.mod")); err == nil {
-			return
+		if d.Name() != "." && hasGoMod {
+			// skip
 		}
-		return Package{
-			Dir:
-			ImportPath: root
-			SqlFiles: sqlFiles,
-		}
-	}
-	fs.WalkDir(fsys, ".", fn)
-}
 
+		matches, err := collectMatchingSuffixFiles(fsys, d, ".sql", ".down.sql")
+
+		thisPackage := Package{
+			Dir:        d.Name(),
+			ImportPath: path.Join(curPath, d.Name()),
+			SQLFiles:   matches,
+		}
+		packages = append(packages, thisPackage)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return packages, nil
+}
 
 func getModulePath(fsys fs.FS) (string, error) {
 	data, err := fs.ReadFile(fsys, "go.mod")
