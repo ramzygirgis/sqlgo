@@ -76,8 +76,8 @@ func (p *parser) ParseQuery() (*AnnotatedQuery, error) {
 	}, nil
 }
 
-func ParseQueries(query string) ([]*AnnotatedQuery, error) {
-	toks, err := lexing.Lex(query)
+func ParseQueries(queries string) ([]*AnnotatedQuery, error) {
+	toks, err := lexing.Lex(queries)
 	if err != nil {
 		return nil, err
 	}
