@@ -9,7 +9,7 @@ import (
 	"slices"
 )
 
-func generateQueriesFile(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
+func GenerateQueriesFile(queries []*ir.Query, packageImportPath string, modelsImportPath string) (string, error) {
 	if len(queries) == 0 {
 		return "", fmt.Errorf("generation function expected nonempty catalog")
 	}
@@ -39,7 +39,7 @@ func generateQueriesFile(queries []*ir.Query, packageImportPath string, modelsIm
 	return string(cleanedCode), nil
 }
 
-func generateModelsFile(catalog catalog.Catalog, modelsImportPath string) (string, error) {
+func GenerateModelsFile(catalog catalog.Catalog, modelsImportPath string) (string, error) {
 	if len(catalog.Tables) == 0 {
 		return "", fmt.Errorf("generation function expected nonempty catalog")
 	}
@@ -68,7 +68,7 @@ func generateModelsFile(catalog catalog.Catalog, modelsImportPath string) (strin
 	return string(cleanedCode), nil
 }
 
-func generateDbFile(modelsImportPath string) (string, error) {
+func GenerateDbFile(modelsImportPath string) (string, error) {
 	packageDeclaration := getPackageDeclaration(modelsImportPath)
 	importString := getImportStringDb()
 	DbTxInterfaceSource := _DbTxInterfaceSource()
