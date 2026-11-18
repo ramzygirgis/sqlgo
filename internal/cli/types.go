@@ -5,12 +5,12 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/project"
 )
 
-type analyzedFile struct {
+type AnalyzedFile struct {
 	SourcePath string
 	Queries    []*ir.Query
 }
 
-type analyzedPackage struct {
+type AnalyzedPackage struct {
 	project.Package
-	Files []analyzedFile
+	Files []AnalyzedFile
 }
