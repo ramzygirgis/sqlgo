@@ -14,3 +14,8 @@ type AnalyzedPackage struct {
 	project.DirectoryInfo
 	Files []AnalyzedFile
 }
+
+type OutputFile struct {
+	Path     string
+	Contents []byte
+}

@@ -16,7 +16,12 @@ func Generate() error {
 		return err
 	}
 
-	stale, err := findStale(fsys, analyzedPackages) // generated files no longer produced
+	outputs, err := render(proj, c, analyzedPackages)
+	if err != nil {
+		return err
+	}
+
+	stale, err := findStale(fsys, outputs) // generated files no longer produced
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ramzygirgis/sqlgo/internal/analyzer"
 	"github.com/ramzygirgis/sqlgo/internal/catalog"
+	"github.com/ramzygirgis/sqlgo/internal/codegen"
 	"github.com/ramzygirgis/sqlgo/internal/ir"
 	"github.com/ramzygirgis/sqlgo/internal/parsing"
 	"github.com/ramzygirgis/sqlgo/internal/project"
@@ -54,7 +55,6 @@ func loadCatalog(fsys fs.FS, proj project.Project) (*catalog.Catalog, error) {
 
 func analyzePackages(fsys fs.FS, proj project.Project, c *catalog.Catalog) ([]AnalyzedPackage, error) {
 	var analyzedPackages []AnalyzedPackage
-	// note: we should collect errors instead of early exiting when seeing one, so user gets multiple at once
 	var errs []error
 	for _, queryPackage := range proj.QueryPackages {
 		var analyzedFiles []AnalyzedFile
@@ -105,4 +105,51 @@ func analyzePackages(fsys fs.FS, proj project.Project, c *catalog.Catalog) ([]An
 		return nil, errors.Join(errs...)
 	}
 	return analyzedPackages, nil
+}
+
+func render(proj project.Project, c *catalog.Catalog, analyzedPackages []AnalyzedPackage) ([]OutputFile, error) {
+	var outputs []OutputFile
+
+	modelsImportPath := proj.ModelsInfo.ImportPath
+	modelsDir := proj.ModelsInfo.Dir
+	// gen models
+	modelsContents, err := codegen.GenerateModelsFile(*c, modelsImportPath)
+	if err != nil {
+		return nil, fmt.Errorf("models.go: %s", err)
+	}
+	modelsFile := OutputFile{
+		Path:     path.Join(modelsDir, "models.go"),
+		Contents: []byte(modelsContents),
+	}
+	outputs = append(outputs, modelsFile)
+
+	dbContents, err := codegen.GenerateDbFile(modelsImportPath)
+	if err != nil {
+		return nil, fmt.Errorf("db.go: %s", err)
+	}
+	dbFile := OutputFile{
+		Path:     modelsDir,
+		Contents: []byte(dbContents),
+	}
+	outputs = append(outputs, dbFile)
+
+	for _, analyzedPackage := range analyzedPackages {
+		packageImportPath := analyzedPackage.ImportPath
+		files := analyzedPackage.Files
+		for _, file := range files {
+			if len(file.Queries) == 0 {
+				continue
+			}
+			queryContents, err := codegen.GenerateQueriesFile(file.Queries, packageImportPath, modelsImportPath)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %s", file.SourcePath, err)
+			}
+			queryFile := OutputFile{
+				Path:     file.SourcePath + ".go",
+				Contents: []byte(queryContents),
+			}
+			outputs = append(outputs, queryFile)
+		}
+	}
+	return outputs, nil
 }
