@@ -11,6 +11,6 @@ type AnalyzedFile struct {
 }
 
 type AnalyzedPackage struct {
-	project.Package
+	project.DirectoryInfo
 	Files []AnalyzedFile
 }
