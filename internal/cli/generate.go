@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ramzygirgis/sqlgo/internal/analyzer"
 	"github.com/ramzygirgis/sqlgo/internal/catalog"
@@ -9,6 +10,7 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/project"
 	"io/fs"
 	"os"
+	"path"
 )
 
 func findProject() (string, fs.FS, project.Project, error) {
@@ -54,35 +56,41 @@ func loadCatalog(fsys fs.FS, proj project.Project) (*catalog.Catalog, error) {
 func analyzePackages(fsys fs.FS, proj project.Project, c *catalog.Catalog) ([]AnalyzedPackage, error) {
 	var analyzedPackages []AnalyzedPackage
 	// note: we should collect errors instead of early exiting when seeing one, so user gets multiple at once
+	var errs []error
 	for _, queryPackage := range proj.QueryPackages {
 		var analyzedFiles []AnalyzedFile
+		queryNames := make(map[string]struct{})
 		for _, file := range queryPackage.SQLFiles {
 			// todo: make sure that file is the relative path wrt root
-			contents, err := os.ReadFile(file)
+			sourcePath := path.Join(queryPackage.Dir, file)
+			contents, err := os.ReadFile(sourcePath)
 			if err != nil {
-				return nil, err
+				errs = append(errs, fmt.Errorf("%s %s", sourcePath, err))
+				continue
 			}
 			queries, err := parsing.ParseQueries(string(contents))
 			if err != nil {
-				return nil, err
+				errs = append(errs, fmt.Errorf("%s %s", sourcePath, err))
+				continue
 			}
-			queryNames := make(map[string]struct{})
 			var irQueries []*ir.Query
 			for _, q := range queries {
 				if _, ok := queryNames[q.Name]; ok {
-					return nil, fmt.Errorf("query %s appears multiple times", q.Name)
+					errs = append(errs, fmt.Errorf("%s: query %s appears multiple times", sourcePath, q.Name))
+					continue
 				}
 				queryNames[q.Name] = struct{}{}
 
 				irQuery, err := analyzer.AnalyzeQuery(c, q)
 				if err != nil {
-					return nil, err
+					errs = append(errs, fmt.Errorf("%s %s", sourcePath, err))
+					continue
 				}
 				irQueries = append(irQueries, irQuery)
 			}
 			// generate file with same name as `file` but with a .go after
 			analyzedFile := AnalyzedFile{
-				SourcePath: file, // is this correct? maybe we should append a .go?
+				SourcePath: sourcePath,
 				Queries:    irQueries,
 			}
 			analyzedFiles = append(analyzedFiles, analyzedFile)
@@ -90,10 +98,12 @@ func analyzePackages(fsys fs.FS, proj project.Project, c *catalog.Catalog) ([]An
 		analyzedPackage := AnalyzedPackage{
 			Dir:        queryPackage.Dir,
 			ImportPath: queryPackage.ImportPath,
-			SQLFiles:   queryPackage.SQLFiles,
 			Files:      analyzedFiles,
 		}
 		analyzedPackages = append(analyzedPackages, analyzedPackage)
+	}
+	if len(errs) != 0 {
+		return nil, errors.Join(errs...)
 	}
 	return analyzedPackages, nil
 }
