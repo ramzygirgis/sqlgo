@@ -41,7 +41,7 @@ func GenerateQueriesFile(queries []*ir.Query, packageImportPath string, modelsIm
 
 func GenerateModelsFile(catalog catalog.Catalog, modelsImportPath string) (string, error) {
 	if len(catalog.Tables) == 0 {
-		return "", fmt.Errorf("generation function expected nonempty catalog")
+		return "", fmt.Errorf("schema defines no tables")
 	}
 	packageDeclaration := getPackageDeclaration(modelsImportPath)
 	importString, err := getImportStringModels(catalog, modelsImportPath)
