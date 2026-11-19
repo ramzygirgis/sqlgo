@@ -16,7 +16,7 @@ func Generate() error {
 		return err
 	}
 
-	outputs, err := render(proj, c, analyzedPackages)
+	outputs, err := render(proj, cat, analyzedPackages)
 	if err != nil {
 		return err
 	}

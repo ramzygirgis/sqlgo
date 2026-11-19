@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"github.com/ramzygirgis/sqlgo/internal/analyzer"
@@ -12,6 +13,8 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
+	"strings"
 )
 
 func findProject() (string, fs.FS, project.Project, error) {
@@ -152,4 +155,69 @@ func render(proj project.Project, c *catalog.Catalog, analyzedPackages []Analyze
 		}
 	}
 	return outputs, nil
+}
+
+func findStale(fsys fs.FS, outputs []OutputFile) ([]string, error) {
+	keep := make(map[string]struct{})
+	for _, out := range outputs {
+		keep[out.Path] = struct{}{}
+	}
+
+	var stale []string
+	// watch out -- calling with "."
+	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() {
+			if p == "." {
+				return nil // we shouldn't skip root
+			}
+			name := d.Name()
+			if name == "vendor" || name == "testdata" ||
+				strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+				return fs.SkipDir
+			}
+			// we shouldn't clean another module
+			if _, err := fs.Stat(fsys, path.Join(p, "go.mod")); err == nil {
+				return fs.SkipDir
+			}
+			return nil
+		}
+
+		if !strings.HasSuffix(p, ".go") {
+			return nil
+		}
+		if _, ok := keep[p]; ok {
+			return nil
+		}
+
+		file, err := fsys.Open(p)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		firstLine := ""
+		scanner := bufio.NewScanner(file)
+		if scanner.Scan() {
+			firstLine = scanner.Text()
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+		if firstLine != codegen.GetCodegenHeader() {
+			return nil
+		}
+
+		stale = append(stale, p)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	slices.Sort(stale)
+	return stale, nil
 }
