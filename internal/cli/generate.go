@@ -26,7 +26,5 @@ func Generate() error {
 		return err
 	}
 
-	// generate models.go, using proj.ModelsInfo
-	// generate db.go, just in same dir as models
-	return write(root, analyzedPackages, stale)
+	return write(root, outputs, stale)
 }
