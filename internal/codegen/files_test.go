@@ -34,9 +34,9 @@ CREATE TABLE users (
 // mustDbFile generates db.go, failing the test on error.
 func mustDbFile(t *testing.T, modelsImportPath string) string {
 	t.Helper()
-	src, err := generateDbFile(modelsImportPath)
+	src, err := GenerateDbFile(modelsImportPath)
 	if err != nil {
-		t.Fatalf("generateDbFile(%q): unexpected error: %v", modelsImportPath, err)
+		t.Fatalf("GenerateDbFile(%q): unexpected error: %v", modelsImportPath, err)
 	}
 	return src
 }
@@ -252,7 +252,7 @@ func TestDbFileInterfaces(t *testing.T) {
 /* ---------- models.go ---------- */
 
 func TestModelsFileStruct(t *testing.T) {
-	src, err := generateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
+	src, err := GenerateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -269,7 +269,7 @@ func TestModelsFileStruct(t *testing.T) {
 }
 
 func TestModelsFileNaming(t *testing.T) {
-	src, err := generateModelsFile(buildCatalog(t, `
+	src, err := GenerateModelsFile(buildCatalog(t, `
 CREATE TABLE user_accounts (
 	user_id INT NOT NULL,
 	api_url TEXT NOT NULL
@@ -286,7 +286,7 @@ CREATE TABLE user_accounts (
 }
 
 func TestModelsFileMultipleTables(t *testing.T) {
-	src, err := generateModelsFile(buildCatalog(t, `
+	src, err := GenerateModelsFile(buildCatalog(t, `
 CREATE TABLE users (id INT PRIMARY KEY, name TEXT NOT NULL);
 CREATE TABLE posts (id INT PRIMARY KEY, title TEXT NOT NULL, body TEXT);`), testModelsPath)
 	if err != nil {
@@ -312,7 +312,7 @@ func TestModelsFileImports(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			src, err := generateModelsFile(buildCatalog(t, tt.schema), testModelsPath)
+			src, err := GenerateModelsFile(buildCatalog(t, tt.schema), testModelsPath)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -329,12 +329,12 @@ CREATE TABLE users (id INT PRIMARY KEY);
 CREATE TABLE posts (id INT PRIMARY KEY);
 CREATE TABLE comments (id INT PRIMARY KEY);
 CREATE TABLE tags (id INT PRIMARY KEY);`)
-	first, err := generateModelsFile(cat, testModelsPath)
+	first, err := GenerateModelsFile(cat, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	for i := 0; i < 20; i++ {
-		again, err := generateModelsFile(cat, testModelsPath)
+		again, err := GenerateModelsFile(cat, testModelsPath)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -345,7 +345,7 @@ CREATE TABLE tags (id INT PRIMARY KEY);`)
 }
 
 func TestModelsPackageTypeChecks(t *testing.T) {
-	models, err := generateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
+	models, err := GenerateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -397,7 +397,7 @@ func userQueries() []*ir.Query {
 }
 
 func TestQueriesFileParses(t *testing.T) {
-	src, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	src, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -408,7 +408,7 @@ func TestQueriesFileParses(t *testing.T) {
 }
 
 func TestQueriesFileDeclarations(t *testing.T) {
-	src, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	src, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -424,7 +424,7 @@ func TestQueriesFileDeclarations(t *testing.T) {
 }
 
 func TestQueriesFileSingleImportBlock(t *testing.T) {
-	src, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	src, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -462,7 +462,7 @@ func TestQueriesFileImportsMatchUsage(t *testing.T) {
 		TargetColumns: []ir.Column{{Name: "name", SqlType: ir.TypeText}},
 		Sql:           "INSERT INTO users (name) VALUES ($1);",
 	}}
-	src, err := generateQueriesFile(q, testQueriesPath, testModelsPath)
+	src, err := GenerateQueriesFile(q, testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -474,12 +474,12 @@ func TestQueriesFileImportsMatchUsage(t *testing.T) {
 }
 
 func TestQueriesFileIsDeterministic(t *testing.T) {
-	first, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	first, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	for i := 0; i < 20; i++ {
-		again, _ := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+		again, _ := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 		if again != first {
 			t.Fatalf("output changed between runs\n--- first ---\n%s\n--- run %d ---\n%s", first, i+2, again)
 		}
@@ -487,7 +487,7 @@ func TestQueriesFileIsDeterministic(t *testing.T) {
 }
 
 func TestQueriesFileKeepsQueryOrder(t *testing.T) {
-	src, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	src, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -506,7 +506,7 @@ func TestQueriesFileKeepsQueryOrder(t *testing.T) {
 // Empty input is an error: the CLI decides not to write (or to remove) the file.
 func TestQueriesFileEmpty(t *testing.T) {
 	for _, qs := range [][]*ir.Query{nil, {}} {
-		if src, err := generateQueriesFile(qs, testQueriesPath, testModelsPath); err == nil {
+		if src, err := GenerateQueriesFile(qs, testQueriesPath, testModelsPath); err == nil {
 			t.Errorf("expected an error for %d queries, got none\n%s", len(qs), src)
 		}
 	}
@@ -514,7 +514,7 @@ func TestQueriesFileEmpty(t *testing.T) {
 
 func TestModelsFileEmpty(t *testing.T) {
 	cat := catalog.New()
-	if src, err := generateModelsFile(*cat, testModelsPath); err == nil {
+	if src, err := GenerateModelsFile(*cat, testModelsPath); err == nil {
 		t.Errorf("expected an error for an empty catalog, got none\n%s", src)
 	}
 }
@@ -524,11 +524,11 @@ func TestModelsFileEmpty(t *testing.T) {
 func TestGeneratedHeader(t *testing.T) {
 	const header = "// Code generated by sqlgo. DO NOT EDIT."
 
-	models, err := generateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
+	models, err := GenerateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
 	if err != nil {
 		t.Fatalf("models: %v", err)
 	}
-	queries, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	queries, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("queries: %v", err)
 	}
@@ -548,7 +548,7 @@ func TestGeneratedHeader(t *testing.T) {
 func TestQueriesFileIllegalType(t *testing.T) {
 	q := userQueries()
 	q[0].Parameters[0].SqlType = ir.IllegalSQLType
-	if _, err := generateQueriesFile(q, testQueriesPath, testModelsPath); err == nil {
+	if _, err := GenerateQueriesFile(q, testQueriesPath, testModelsPath); err == nil {
 		t.Error("expected an error for an illegal param type, got none")
 	}
 }
@@ -560,11 +560,11 @@ func TestQueriesFileIllegalType(t *testing.T) {
 // return-type mismatches, missing or unused imports, and models./DBTX
 // qualification bugs in one go.
 func TestEndToEndTypeChecks(t *testing.T) {
-	models, err := generateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
+	models, err := GenerateModelsFile(buildCatalog(t, usersSchema), testModelsPath)
 	if err != nil {
 		t.Fatalf("models: %v", err)
 	}
-	queries, err := generateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
+	queries, err := GenerateQueriesFile(userQueries(), testQueriesPath, testModelsPath)
 	if err != nil {
 		t.Fatalf("queries: %v", err)
 	}

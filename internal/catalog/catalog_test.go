@@ -10,7 +10,7 @@ import (
 // build parses src and applies it to a fresh catalog with ApplyAll.
 func build(t *testing.T, src string) (*Catalog, error) {
 	t.Helper()
-	stmts, err := parsing.ParseAll(src)
+	stmts, err := parsing.ParseSchema(src)
 	if err != nil {
 		t.Fatalf("parse error (fix the test input, not the catalog): %v\ninput: %s", err, src)
 	}
@@ -398,7 +398,7 @@ func TestApplyAllStopsAtFirstError(t *testing.T) {
 func TestApplyAllMatchesApply(t *testing.T) {
 	src := `CREATE TABLE users (id INT PRIMARY KEY, name TEXT);
 	        CREATE TABLE posts (id INT, body TEXT NOT NULL);`
-	stmts, err := parsing.ParseAll(src)
+	stmts, err := parsing.ParseSchema(src)
 	if err != nil {
 		t.Fatalf("parse error: %v", err)
 	}
