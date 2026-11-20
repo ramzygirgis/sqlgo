@@ -1,4 +1,4 @@
-package cli
+package commands
 
 func Generate() error {
 	root, fsys, proj, err := findProject()
@@ -21,7 +21,7 @@ func Generate() error {
 		return err
 	}
 
-	stale, err := findStale(fsys, outputs) // generated files no longer produced
+	stale, err := findStale(fsys, outputs)
 	if err != nil {
 		return err
 	}

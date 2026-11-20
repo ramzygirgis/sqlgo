@@ -1,4 +1,4 @@
-package cli
+package commands
 
 import (
 	"github.com/ramzygirgis/sqlgo/internal/ir"
