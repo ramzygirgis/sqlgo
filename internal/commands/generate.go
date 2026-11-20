@@ -66,7 +66,7 @@ func analyzePackages(fsys fs.FS, proj project.Project, c *catalog.Catalog) ([]An
 		for _, file := range queryPackage.SQLFiles {
 			// todo: make sure that file is the relative path wrt root
 			sourcePath := path.Join(queryPackage.Dir, file)
-			contents, err := os.ReadFile(sourcePath)
+			contents, err := fs.ReadFile(fsys, sourcePath)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s %s", sourcePath, err))
 				continue
@@ -132,7 +132,7 @@ func render(proj project.Project, c *catalog.Catalog, analyzedPackages []Analyze
 		return nil, fmt.Errorf("db.go: %s", err)
 	}
 	dbFile := OutputFile{
-		Path:     modelsDir,
+		Path:     path.Join(modelsDir, "db.go"),
 		Contents: []byte(dbContents),
 	}
 	outputs = append(outputs, dbFile)
@@ -208,7 +208,7 @@ func findStale(fsys fs.FS, outputs []OutputFile) ([]string, error) {
 		if err := scanner.Err(); err != nil {
 			return err
 		}
-		if firstLine != codegen.GetCodegenHeader() {
+		if firstLine != strings.TrimSpace(codegen.GetCodegenHeader()) {
 			return nil
 		}
 

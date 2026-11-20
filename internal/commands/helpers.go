@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"github.com/ramzygirgis/sqlgo/internal/codegen"
 	"io/fs"
@@ -49,6 +50,9 @@ func isSqlGoFile(fileContents string) bool {
 
 func shouldWriteFile(fullPath string, outputFile OutputFile) (bool, error) {
 	contentBytes, err := os.ReadFile(fullPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return true, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -67,7 +71,7 @@ func shouldWriteFile(fullPath string, outputFile OutputFile) (bool, error) {
 
 func shouldDeleteStale(stalePath string) (bool, error) {
 	contentBytes, err := os.ReadFile(stalePath)
-	if err == fs.ErrNotExist {
+	if errors.Is(err, fs.ErrNotExist) {
 		return false, nil
 	}
 	if err != nil {
