@@ -16,7 +16,7 @@ func shouldSkipDir(fsys fs.FS, curPath string, d fs.DirEntry) (bool, error) {
 		return true, nil
 	}
 
-	if shouldIgnorePath(curPath) {
+	if shouldIgnorePath(d.Name()) {
 		return true, nil
 	}
 
@@ -36,8 +36,18 @@ func shouldIgnoreDirName(dirName string) bool {
 	ignoreSet["vendor"] = struct{}{}
 	ignoreSet["testdata"] = struct{}{}
 
-	_, ok := ignoreSet[dirName]
-	return ok
+	if _, ok := ignoreSet[dirName]; ok {
+		return true
+	}
+
+	ignoredPrefixes := []string{".", "_"}
+	for _, ignoredPrefix := range ignoredPrefixes {
+		if strings.HasPrefix(dirName, ignoredPrefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func shouldIgnorePath(curPath string) bool {
@@ -45,17 +55,8 @@ func shouldIgnorePath(curPath string) bool {
 	ignoreSet := make(map[string]struct{})
 	ignoreSet["schema"] = struct{}{}
 
-	if _, ok := ignoreSet[curPath]; ok {
-		return true
-	}
-
-	ignoredPrefixes := []string{".", "_"}
-	for _, ignoredPrefix := range ignoredPrefixes {
-		if strings.HasPrefix(curPath, ignoredPrefix) {
-			return true
-		}
-	}
-	return false
+	_, ok := ignoreSet[curPath]
+	return ok
 }
 
 func isSeperateModule(fsys fs.FS, curPath string) (bool, error) {

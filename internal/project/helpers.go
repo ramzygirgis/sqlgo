@@ -19,7 +19,7 @@ func directoryHasFile(fsys fs.FS, curPath string, targetFileName string) (bool, 
 		return false, err
 	}
 	for _, entry := range entries {
-		if entry.Name() == targetFileName {
+		if !entry.IsDir() && entry.Name() == targetFileName {
 			return true, nil
 		}
 	}
