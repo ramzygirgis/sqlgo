@@ -5,32 +5,29 @@ import (
 )
 
 func (q *Query) Validate() error {
-	for i, param := range q.Parameters {
-		if param.Index != i+1 {
-			return fmt.Errorf("parameter indexing must be ordered and contiguous from 1-N: expected $%d, got $%d", i+1, param.Index)
-		}
-		if param.SqlType != TypeText && param.SqlType != TypeInt {
-			return fmt.Errorf("invalid SQL type %s for parameter $%d", param.SqlType, param.Index)
-		}
+	err := validateParameters(q.Parameters)
+	if err != nil {
+		return err
 	}
 
-	for _, col := range q.ResultColumns {
-		if col.SqlType != TypeText && col.SqlType != TypeInt {
-			return fmt.Errorf("invalid SQL type %s for column %s", col.SqlType, col.Name)
-		}
-	}
-	for _, col := range q.TargetColumns {
-		if col.SqlType != TypeText && col.SqlType != TypeInt {
-			return fmt.Errorf("invalid SQL type %s for column %s", col.SqlType, col.Name)
-		}
+	err = validateColumns(q.ResultColumns)
+	if err != nil {
+		return err
 	}
 
-	if q.Name == "" {
-		return fmt.Errorf("query name is empty")
+	err = validateColumns(q.TargetColumns)
+	if err != nil {
+		return err
 	}
 
-	if q.Cardinality != One && q.Cardinality != Many && q.Cardinality != Exec {
-		return fmt.Errorf("unexpected query cardinality %s", q.Cardinality)
+	err = validateName(q.Name)
+	if err != nil {
+		return nil
+	}
+
+	err = validateCardinality(q.Cardinality)
+	if err != nil {
+		return err
 	}
 
 	switch q.Kind {
@@ -58,5 +55,40 @@ func (q *Query) Validate() error {
 		return fmt.Errorf("invalid query kind %s", q.Kind)
 	}
 
+	return nil
+}
+
+func validateParameters(params []Parameter) error {
+	for i, param := range params {
+		if param.Index != i+1 {
+			return fmt.Errorf("parameter indexing must be ordered and contiguous from 1-N: expected $%d, got $%d", i+1, param.Index)
+		}
+		if !isType(param.SqlType) {
+			return fmt.Errorf("invalid SQL type %s for parameter $%d", param.SqlType, param.Index)
+		}
+	}
+	return nil
+}
+
+func validateColumns(cols []Column) error {
+	for _, col := range cols {
+		if !isType(col.SqlType) {
+			return fmt.Errorf("invalid SQL type %s for column %s", col.SqlType, col.Name)
+		}
+	}
+	return nil
+}
+
+func validateName(name string) error {
+	if name == "" {
+		return fmt.Errorf("query name is empty")
+	}
+	return nil
+}
+
+func validateCardinality(c Cardinality) error {
+	if c != One && c != Many && c != Exec {
+		return fmt.Errorf("unexpected query cardinality %s", c)
+	}
 	return nil
 }

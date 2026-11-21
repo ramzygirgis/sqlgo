@@ -26,10 +26,15 @@ const (
 	IllegalSQLType SQLType = iota
 	TypeText
 	TypeInt
+	TypeTimestamp
+	TypeBoolean
 )
 
 func (s SQLType) String() string { // should this be a Ptr method?
-	strings := [...]string{"IllegalSQLType", "TypeText", "TypeInt"}
+	strings := [...]string{
+		"IllegalSQLType", "TypeText", "TypeInt",
+		"TypeTimestamp", "TypeBoolean",
+	}
 	if s < 0 || int(s) >= len(strings) {
 		return fmt.Sprintf("SQLType(%d)", s)
 	}
