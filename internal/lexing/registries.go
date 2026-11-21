@@ -22,8 +22,6 @@ func isKeyword(s string) bool {
 	keywordSet["WHERE"] = struct{}{}
 	keywordSet["AND"] = struct{}{}
 	keywordSet["OR"] = struct{}{}
-	keywordSet["LParen"] = struct{}{}
-	keywordSet["RParen"] = struct{}{}
 	keywordSet["INSERT"] = struct{}{}
 	keywordSet["INTO"] = struct{}{}
 	keywordSet["VALUES"] = struct{}{}
