@@ -13,6 +13,7 @@ import (
 )
 
 func directoryHasFile(fsys fs.FS, curPath string, targetFileName string) (bool, error) {
+	// could alternatively do some fs.ReadFile shit
 	entries, err := fs.ReadDir(fsys, curPath)
 	if err != nil {
 		return false, err

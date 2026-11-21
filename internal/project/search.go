@@ -50,24 +50,12 @@ func findQueryPackages(fsys fs.FS, modulePath string) ([]Package, error) {
 			return nil
 		}
 
-		if curPath != "." {
-			if d.Name() == "vendor" || d.Name() == "testdata" {
-				return fs.SkipDir
-			}
-			if strings.HasPrefix(d.Name(), ".") || strings.HasPrefix(d.Name(), "_") {
-				return fs.SkipDir
-			}
-			if curPath == "schema" {
-				return fs.SkipDir
-			}
-			// if you have a go.mod, you're a separate module
-			hasGoMod, err := directoryHasFile(fsys, curPath, "go.mod")
-			if err != nil {
-				return err
-			}
-			if hasGoMod {
-				return fs.SkipDir
-			}
+		shouldSkip, err := shouldSkipDir(fsys, curPath, d)
+		if err != nil {
+			return err
+		}
+		if shouldSkip {
+			return fs.SkipDir
 		}
 
 		matches, err := collectMatchingSuffixFiles(fsys, curPath, ".sql")
