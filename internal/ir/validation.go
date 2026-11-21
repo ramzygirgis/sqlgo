@@ -32,30 +32,12 @@ func (q *Query) Validate() error {
 
 	switch q.Kind {
 	case Select:
-		if len(q.ResultColumns) == 0 {
-			return fmt.Errorf("SELECT statement has no result columns")
-		}
-		if len(q.TargetColumns) != 0 {
-			return fmt.Errorf("SELECT statement has target columns")
-		}
-		if q.Cardinality == Exec {
-			return fmt.Errorf("SELECT statement cannot have cardinality :exec")
-		}
+		return validateSelectInvariants(q)
 	case Insert:
-		if len(q.ResultColumns) != 0 {
-			return fmt.Errorf("INSERT statement has a nonzero amount of result columns")
-		}
-		if len(q.TargetColumns) == 0 {
-			return fmt.Errorf("INSERT statement has no target columns")
-		}
-		if q.Cardinality != Exec {
-			return fmt.Errorf("INSERT statement can only have cardinality :exec -- got %s", q.Cardinality)
-		}
+		return validateInsertInvariants(q)
 	default:
 		return fmt.Errorf("invalid query kind %s", q.Kind)
 	}
-
-	return nil
 }
 
 func validateParameters(params []Parameter) error {
