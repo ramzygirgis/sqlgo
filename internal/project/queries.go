@@ -16,7 +16,7 @@ func shouldSkipDir(fsys fs.FS, curPath string, d fs.DirEntry) (bool, error) {
 		return true, nil
 	}
 
-	if shouldIgnorePath(d.Name()) {
+	if shouldIgnorePath(curPath) {
 		return true, nil
 	}
 
