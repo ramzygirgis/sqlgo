@@ -32,10 +32,15 @@ func isKeyword(s string) bool {
 	return ok
 }
 
+// note: we should have some sort of layer between lex and parse,
+// and convert same types to eachother
+
 func isType(s string) bool {
 	typeSet := make(map[string]struct{})
 	typeSet["TEXT"] = struct{}{}
 	typeSet["INT"] = struct{}{}
+	typeSet["TIMESTAMP"] = struct{}{}
+	typeSet["BOOLEAN"] = struct{}{}
 
 	_, ok := typeSet[strings.ToUpper(s)]
 	return ok
