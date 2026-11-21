@@ -10,3 +10,13 @@ func isType(s SQLType) bool {
 	_, ok := typeSet[s]
 	return ok
 }
+
+func isCardinality(c Cardinality) bool {
+	cardinalitySet := make(map[Cardinality]struct{})
+	cardinalitySet[One] = struct{}{}
+	cardinalitySet[Many] = struct{}{}
+	cardinalitySet[Exec] = struct{}{}
+
+	_, ok := cardinalitySet[c]
+	return ok
+}

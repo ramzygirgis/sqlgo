@@ -87,7 +87,7 @@ func validateName(name string) error {
 }
 
 func validateCardinality(c Cardinality) error {
-	if c != One && c != Many && c != Exec {
+	if !isCardinality(c) {
 		return fmt.Errorf("unexpected query cardinality %s", c)
 	}
 	return nil
