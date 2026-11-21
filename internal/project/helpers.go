@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -86,4 +87,25 @@ func ExtractModulePath(goModBody string) (string, error) {
 		return modulePath, nil
 	}
 	return "", fmt.Errorf("no module declaration found in go.mod")
+}
+
+// relative to project root -- something of the form:
+// ["schema/users.sql", "schema/cars.sql"]
+func collectSchemaFilepaths(entries []fs.DirEntry) ([]string, error) {
+	var filenames []string
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".sql") || strings.HasSuffix(name, ".down.sql") {
+			continue
+		}
+		full := path.Join("schema", name)
+		filenames = append(filenames, full)
+	}
+	if len(filenames) == 0 {
+		return nil, fmt.Errorf("schema: no .sql files found (down migrations aren't included)")
+	}
+	return filenames, nil
 }

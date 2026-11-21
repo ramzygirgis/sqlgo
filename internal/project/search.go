@@ -30,22 +30,7 @@ func findSchemaFiles(fsys fs.FS) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var filenames []string
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if !strings.HasSuffix(name, ".sql") || strings.HasSuffix(name, ".down.sql") {
-			continue
-		}
-		full := path.Join("schema", name)
-		filenames = append(filenames, full)
-	}
-	if len(filenames) == 0 {
-		return nil, fmt.Errorf("schema: no .sql files found (down migrations aren't included)")
-	}
-	return filenames, nil
+	return collectSchemaFilepaths(entries)
 }
 
 func modelsInfo(modulePath string) DirectoryInfo {
