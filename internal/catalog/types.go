@@ -1,13 +1,18 @@
 package catalog
 
+type Catalog struct {
+	Tables map[string]*Table
+}
+
+type Table struct {
+	Name    string
+	Columns []Column
+}
+
 type Column struct {
 	Name     string
 	SqlType  string
 	Nullable bool
-}
-
-type Catalog struct {
-	Tables map[string]*Table
 }
 
 // ideas:

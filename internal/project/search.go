@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"path"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -20,29 +19,7 @@ func getModulePath(fsys fs.FS) (string, error) {
 	}
 
 	body := string(data)
-	lines := strings.Split(body, "\n")
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) == 0 || fields[0] != "module" {
-			continue
-		}
-		if len(fields) <= 1 {
-			return "", fmt.Errorf("no module path found in module declaration")
-		}
-		modulePath := fields[1]
-		// potentially have some validation for modulePath
-		//
-		if strings.HasPrefix(modulePath, `"`) || strings.HasPrefix(modulePath, "`") {
-			unquoted, err := strconv.Unquote(modulePath)
-			if err != nil {
-				return "", fmt.Errorf("go.mod: invalid module path %s: %w", modulePath, err)
-			}
-			modulePath = unquoted
-		}
-		return modulePath, nil
-	}
-
-	return "", fmt.Errorf("no module declaration found in go.mod")
+	return ExtractModulePath(body)
 }
 
 func findSchemaFiles(fsys fs.FS) ([]string, error) {
