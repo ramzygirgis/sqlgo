@@ -60,9 +60,12 @@ func collectAndInferUpdateParams(table *catalog.Table, s *parsing.UpdateStatemen
 		return nil, err
 	}
 
-	whereParams, err := collectAndInferWhereParams(table, s.Where)
-	if err != nil {
-		return nil, err
+	var whereParams []Param
+	if s.Where != nil {
+		whereParams, err = collectAndInferWhereParams(table, s.Where)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	params := append(cvParams, whereParams...)
@@ -92,6 +95,18 @@ func collectAndInferCVParams(table *catalog.Table, cvPairs []parsing.ColumnValue
 			}
 			param := Param{index: v.Index, sqlType: sqlType, nullable: column.Nullable}
 			params = append(params, param)
+		case *parsing.Literal:
+			column, ok := table.Column(cvPair.ColumnRef.Name)
+			if !ok {
+				return nil, fmt.Errorf("column %q does not appear in table %q", cvPair.ColumnRef.Name, table.Name)
+			}
+			irColumn, err := ToIRColumn(table.Name, *column)
+			if err != nil {
+				return nil, err
+			}
+			if err := validateLiteral(v, irColumn); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return params, nil

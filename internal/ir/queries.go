@@ -59,13 +59,13 @@ func validateUpdateInvariants(q *Query) error {
 	 3. cardinality must be one of: Exec
 	*/
 	if len(q.ResultColumns) != 0 {
-		return fmt.Errorf("INSERT statement has result columns")
+		return fmt.Errorf("UPDATE statement has result columns")
 	}
 	if len(q.TargetColumns) == 0 {
-		return fmt.Errorf("INSERT statement has no target columns")
+		return fmt.Errorf("UPDATE statement has no target columns")
 	}
 	if !isUpdateCardinality(q.Cardinality) {
-		return fmt.Errorf("INSERT statement cannot have cardinality %s", q.Cardinality)
+		return fmt.Errorf("UPDATE statement cannot have cardinality %s", q.Cardinality)
 	}
 	return nil
 }

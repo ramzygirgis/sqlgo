@@ -33,7 +33,7 @@ func (u *UpdateStatement) String() string {
 	sb.WriteString("\nSET ")
 	for i, cvPair := range u.CvPairs {
 		sb.WriteString(fmt.Sprintf("%s = %s", cvPair.ColumnRef.Name, cvPair.Value))
-		if i != len(u.CvPairs) {
+		if i != len(u.CvPairs)-1 {
 			sb.WriteString(", ")
 		}
 	}
