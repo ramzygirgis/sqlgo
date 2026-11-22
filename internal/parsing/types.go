@@ -7,7 +7,7 @@ import (
 type LiteralKind int
 
 const (
-	IllegalLiteral = iota
+	IllegalLiteral LiteralKind = iota
 	StringLiteral
 	NumberLiteral // maybe later, make this IntLiteral
 	BooleanLiteral

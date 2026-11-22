@@ -16,7 +16,6 @@ func isKeyword(s string) bool {
 	keywordSet["NOT"] = struct{}{}
 	keywordSet["IN"] = struct{}{}
 	keywordSet["PRIMARY"] = struct{}{}
-	keywordSet["NULL"] = struct{}{}
 	keywordSet["KEY"] = struct{}{}
 	keywordSet["DEFAULT"] = struct{}{}
 	keywordSet["WHERE"] = struct{}{}
@@ -25,6 +24,11 @@ func isKeyword(s string) bool {
 	keywordSet["INSERT"] = struct{}{}
 	keywordSet["INTO"] = struct{}{}
 	keywordSet["VALUES"] = struct{}{}
+	// storing true, false, null as keywords is kinda jank lol.
+	// but i think this is correct
+	keywordSet["TRUE"] = struct{}{}
+	keywordSet["FALSE"] = struct{}{}
+	keywordSet["NULL"] = struct{}{}
 
 	_, ok := keywordSet[strings.ToUpper(s)]
 	return ok
