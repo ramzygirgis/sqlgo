@@ -22,7 +22,7 @@ func (q *Query) Validate() error {
 
 	err = validateName(q.Name)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = validateCardinality(q.Cardinality)
