@@ -37,3 +37,11 @@ func isInsertCardinality(c Cardinality) bool {
 	_, ok := cardinalitySet[c]
 	return ok
 }
+
+func isUpdateCardinality(c Cardinality) bool {
+	cardinalitySet := make(map[Cardinality]struct{})
+	cardinalitySet[Exec] = struct{}{}
+
+	_, ok := cardinalitySet[c]
+	return ok
+}

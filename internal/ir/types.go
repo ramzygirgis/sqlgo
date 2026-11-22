@@ -10,10 +10,11 @@ const (
 	IllegalQueryKind QueryKind = iota
 	Select
 	Insert
+	Update
 )
 
-func (q QueryKind) String() string { // should this be a Ptr method?
-	strings := [...]string{"IllegalQueryKind", "Select", "Insert"}
+func (q QueryKind) String() string {
+	strings := [...]string{"IllegalQueryKind", "Select", "Insert", "Update"}
 	if q < 0 || int(q) >= len(strings) {
 		return fmt.Sprintf("QueryKind(%d)", q)
 	}

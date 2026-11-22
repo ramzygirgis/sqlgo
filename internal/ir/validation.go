@@ -35,6 +35,8 @@ func (q *Query) Validate() error {
 		return validateSelectInvariants(q)
 	case Insert:
 		return validateInsertInvariants(q)
+	case Update:
+		return validateUpdateInvariants(q)
 	default:
 		return fmt.Errorf("invalid query kind %s", q.Kind)
 	}

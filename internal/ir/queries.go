@@ -47,3 +47,25 @@ func validateInsertInvariants(q *Query) error {
 	}
 	return nil
 }
+
+func validateUpdateInvariants(q *Query) error {
+	if q.Kind != Update {
+		return fmt.Errorf("non-UPDATE statement passed into ir.validateUpdateInvariants")
+	}
+	/*
+	 UPDATE statements should have:
+	 1. no result columns
+	 2. nonzero amount of target columns
+	 3. cardinality must be one of: Exec
+	*/
+	if len(q.ResultColumns) != 0 {
+		return fmt.Errorf("INSERT statement has result columns")
+	}
+	if len(q.TargetColumns) == 0 {
+		return fmt.Errorf("INSERT statement has no target columns")
+	}
+	if !isUpdateCardinality(q.Cardinality) {
+		return fmt.Errorf("INSERT statement cannot have cardinality %s", q.Cardinality)
+	}
+	return nil
+}
