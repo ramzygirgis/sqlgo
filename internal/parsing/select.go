@@ -49,7 +49,7 @@ func (s *FromKeyword) String() string {
 }
 
 func (p *parser) parseSelect() (*SelectStatement, error) {
-	if _, err := p.expect(lexing.Keyword, "SELECT"); err != nil {
+	if err := p.expectKeyword("SELECT"); err != nil {
 		return nil, err
 	}
 	var where Expr = nil
