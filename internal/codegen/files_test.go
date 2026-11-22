@@ -323,6 +323,83 @@ func TestModelsFileImports(t *testing.T) {
 	}
 }
 
+const eventsSchema = `
+CREATE TABLE events (
+	id INT PRIMARY KEY,
+	happened_at TIMESTAMP NOT NULL,
+	cancelled_at TIMESTAMP,
+	public BOOLEAN NOT NULL,
+	archived BOOLEAN
+);`
+
+func TestModelsFileTimestampAndBoolean(t *testing.T) {
+	src, err := GenerateModelsFile(buildCatalog(t, eventsSchema), testModelsPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	f := parseGo(t, "models.go", src)
+	got := structFields(t, f, "Event")
+	want := []string{"ID int32", "HappenedAt time.Time", "CancelledAt sql.NullTime", "Public bool", "Archived sql.NullBool"}
+	if !slices.Equal(got, want) {
+		t.Errorf("Event fields:\n got: %v\nwant: %v", got, want)
+	}
+	if got, want := importsOf(f), []string{"database/sql", "time"}; !slices.Equal(got, want) {
+		t.Errorf("imports: got %v, want %v", got, want)
+	}
+	typecheck(t, testModelsPath, map[string]string{
+		"models.go": src,
+		"db.go":     mustDbFile(t, testModelsPath),
+	}, newImporter())
+}
+
+// A not-null TIMESTAMP needs "time" but not "database/sql".
+func TestModelsFileTimeImportOnly(t *testing.T) {
+	src, err := GenerateModelsFile(buildCatalog(t, `CREATE TABLE t (id INT PRIMARY KEY, at TIMESTAMP NOT NULL, ok BOOLEAN NOT NULL);`), testModelsPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got, want := importsOf(parseGo(t, "models.go", src)), []string{"time"}; !slices.Equal(got, want) {
+		t.Errorf("imports: got %v, want %v", got, want)
+	}
+}
+
+// Params of the new types: the queries file imports what its signatures use.
+func TestQueriesFileTimestampAndBooleanParams(t *testing.T) {
+	q := []*ir.Query{{
+		Name:        "CreateEvent",
+		Cardinality: ir.Exec,
+		Kind:        ir.Insert,
+		TargetTable: "events",
+		Parameters: []ir.Parameter{
+			{Index: 1, SqlType: ir.TypeTimestamp},
+			{Index: 2, SqlType: ir.TypeBoolean},
+		},
+		TargetColumns: []ir.Column{
+			{Name: "happened_at", SqlType: ir.TypeTimestamp},
+			{Name: "public", SqlType: ir.TypeBoolean},
+		},
+		Sql: "INSERT INTO events (happened_at, public) VALUES ($1, $2);",
+	}}
+	queries, err := GenerateQueriesFile(q, testQueriesPath, testModelsPath)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got, want := importsOf(parseGo(t, "queries.sql.go", queries)), []string{"context", testModelsPath, "time"}; !slices.Equal(got, want) {
+		t.Errorf("imports: got %v, want %v", got, want)
+	}
+
+	models, err := GenerateModelsFile(buildCatalog(t, eventsSchema), testModelsPath)
+	if err != nil {
+		t.Fatalf("models: %v", err)
+	}
+	imp := newImporter()
+	imp.local[testModelsPath] = typecheck(t, testModelsPath, map[string]string{
+		"models.go": models,
+		"db.go":     mustDbFile(t, testModelsPath),
+	}, imp)
+	typecheck(t, testQueriesPath, map[string]string{"queries.sql.go": queries}, imp)
+}
+
 func TestModelsFileIsDeterministic(t *testing.T) {
 	cat := buildCatalog(t, `
 CREATE TABLE users (id INT PRIMARY KEY);
