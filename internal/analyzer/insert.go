@@ -15,7 +15,7 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*Unanno
 		return nil, fmt.Errorf("table %q does not exist", tableName)
 	}
 
-	targetColumns, err := collectTargetColumns(table, s)
+	targetColumns, err := collectInsertTargetColumns(table, s)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func handleInsert(cat *catalog.Catalog, s *parsing.InsertIntoStatement) (*Unanno
 	}, nil
 }
 
-func collectTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) ([]ir.Column, error) {
+func collectInsertTargetColumns(table *catalog.Table, s *parsing.InsertIntoStatement) ([]ir.Column, error) {
 	var columns []catalog.Column
 	if len(s.Columns) == 0 {
 		columns = table.Columns
