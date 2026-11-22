@@ -57,6 +57,34 @@ func irToGoType(irType ir.SQLType, nullable bool) (GoType, error) {
 				ImportPath:  "",
 			}, nil
 		}
+	case ir.TypeTimestamp:
+		if nullable {
+			return GoType{
+				TypeName:    "NullTime",
+				PackageName: "sql",
+				ImportPath:  "database/sql",
+			}, nil
+		} else {
+			return GoType{
+				TypeName:    "Time",
+				PackageName: "time",
+				ImportPath:  "time",
+			}, nil
+		}
+	case ir.TypeBoolean:
+		if nullable {
+			return GoType{
+				TypeName:    "NullBool",
+				PackageName: "sql",
+				ImportPath:  "database/sql",
+			}, nil
+		} else {
+			return GoType{
+				TypeName:    "bool",
+				PackageName: "",
+				ImportPath:  "",
+			}, nil
+		}
 	default:
 		return GoType{}, fmt.Errorf("Invalid SQLType %s", irType)
 	}
