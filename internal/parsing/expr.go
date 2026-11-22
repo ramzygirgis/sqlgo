@@ -59,7 +59,7 @@ func (p *parser) parseColumnRef() (string, bool, error) {
 // Literals
 
 type Literal struct {
-	// maybe this should actually be typed as a union, or we should attach a type field.
+	Kind LiteralKind
 	Body string
 }
 
@@ -168,6 +168,14 @@ func (p *parser) parseOperand() (Expr, error) {
 			return nil, err
 		}
 		return node, nil
+	case lexing.Keyword:
+		switch p.read().Body {
+		case "TRUE", "FALSE":
+			return &Literal{Kind: BooleanLiteral, Body: p.next().Body}, nil
+		case "NULL":
+			p.next()
+			return &Literal{Kind: NullLiteral, Body: "NULL"}, nil
+		}
 	default:
 		return nil, fmt.Errorf("Expected Identifier, String, Number, Parameter or (, got %s %s", p.read().Kind, p.read().Body)
 	}
