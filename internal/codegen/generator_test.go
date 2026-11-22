@@ -27,6 +27,10 @@ func TestMapType(t *testing.T) {
 		{"text nullable", ir.TypeText, true, "NullString", "sql", "database/sql", "sql.NullString"},
 		{"int not null", ir.TypeInt, false, "int32", "", "", "int32"},
 		{"int nullable", ir.TypeInt, true, "NullInt32", "sql", "database/sql", "sql.NullInt32"},
+		{"timestamp not null", ir.TypeTimestamp, false, "Time", "time", "time", "time.Time"},
+		{"timestamp nullable", ir.TypeTimestamp, true, "NullTime", "sql", "database/sql", "sql.NullTime"},
+		{"boolean not null", ir.TypeBoolean, false, "bool", "", "", "bool"},
+		{"boolean nullable", ir.TypeBoolean, true, "NullBool", "sql", "database/sql", "sql.NullBool"},
 	}
 
 	for _, tt := range tests {
@@ -101,15 +105,19 @@ func TestEverySQLTypeMaps(t *testing.T) {
 	}
 }
 
-// Non-nullable types are plain Go builtins: no package, no import.
-func TestNotNullNeedsNoImport(t *testing.T) {
+// A type has a package qualifier exactly when it has an import: a qualifier
+// without an import won't compile, and an import without a qualifier is unused.
+// (Not-null types aren't all builtins: TIMESTAMP is time.Time.)
+func TestPackageAndImportAgree(t *testing.T) {
 	for st := ir.IllegalSQLType + 1; !strings.HasPrefix(st.String(), "SQLType("); st++ {
-		got, err := mapType(st, false)
-		if err != nil {
-			t.Fatalf("%v: unexpected error: %v", st, err)
-		}
-		if got.ImportPath != "" || got.PackageName != "" {
-			t.Errorf("%v not null: got package %q / import %q, want none", st, got.PackageName, got.ImportPath)
+		for _, nullable := range []bool{false, true} {
+			got, err := mapType(st, nullable)
+			if err != nil {
+				t.Fatalf("%v (nullable=%v): unexpected error: %v", st, nullable, err)
+			}
+			if (got.PackageName == "") != (got.ImportPath == "") {
+				t.Errorf("%v (nullable=%v): package %q but import %q", st, nullable, got.PackageName, got.ImportPath)
+			}
 		}
 	}
 }
