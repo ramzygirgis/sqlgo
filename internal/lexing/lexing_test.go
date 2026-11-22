@@ -43,6 +43,12 @@ func TestLexKinds(t *testing.T) {
 			[]TokenKind{Identifier, Identifier, EOF}},
 		{"empty input", ``,
 			[]TokenKind{EOF}},
+		{"TRUE FALSE NULL are keywords", `TRUE false Null`,
+			[]TokenKind{Keyword, Keyword, Keyword, EOF}},
+		{"identifiers that merely contain TRUE or NULL", `is_true nullable truest`,
+			[]TokenKind{Identifier, Identifier, Identifier, EOF}},
+		{"boolean comparison", `active = true`,
+			[]TokenKind{Identifier, Comparator, Keyword, EOF}},
 
 		// --- INSERT ---
 		{"insert with columns", `INSERT INTO users (id, name) VALUES (1, 'bob');`,
@@ -145,6 +151,7 @@ func TestLexBodies(t *testing.T) {
 		{"escaped quote kept raw", `'O''Brien'`, []string{"'O''Brien'"}},
 		{"param keeps dollar", `$12`, []string{"$12"}},
 		{"insert keywords uppercased", `insert into t values`, []string{"INSERT", "INTO", "t", "VALUES"}},
+		{"literal keywords uppercased", `true FALSE nUlL`, []string{"TRUE", "FALSE", "NULL"}},
 
 		// --- annotations: body is the function name ---
 		{"annotation body is the name", "-- name: GetUser :one", []string{"GetUser"}},
