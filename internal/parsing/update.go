@@ -80,6 +80,10 @@ func (p *parser) parseUpdate() (*UpdateStatement, error) {
 		}
 	}
 
+	if _, err := p.expectKind(lexing.Semicolon); err != nil {
+		return nil, err
+	}
+
 	return &UpdateStatement{
 		TableName: tableName,
 		CvPairs:   cvPairs,
