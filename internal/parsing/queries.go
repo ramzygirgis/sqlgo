@@ -6,25 +6,6 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/lexing"
 )
 
-type Cardinality int
-
-const (
-	IllegalCardinality Cardinality = iota
-	One
-	Many
-	Exec
-)
-
-func (c Cardinality) String() string {
-	strings := [...]string{
-		"IllegalCardinality", "One", "Many", "Exec",
-	}
-	if c < 0 || int(c) >= len(strings) {
-		return fmt.Sprintf("Cardinality(%d)", c)
-	}
-	return strings[c]
-}
-
 type Annotation struct {
 	Name        string
 	Cardinality Cardinality
