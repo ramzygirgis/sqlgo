@@ -16,7 +16,6 @@ const (
 	Comma
 	Number
 	String
-	Boolean
 	Param
 	Type
 	Comparator
@@ -31,7 +30,7 @@ const (
 func (tk TokenKind) String() string {
 	strings := [...]string{"IllegalTokenKind", "OneAnnotation",
 		"ManyAnnotation", "ExecAnnotation", "Identifier", "Keyword",
-		"Comma", "Number", "String", "Boolean", "Param", "Type",
+		"Comma", "Number", "String", "Param", "Type",
 		"Comparator", "LParen", "RParen", "Star",
 		"Semicolon", "EOF", "OutOfBounds",
 	}
