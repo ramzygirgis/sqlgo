@@ -45,6 +45,12 @@ func (p *parser) parseStatement() (Statement, error) {
 			return nil, err
 		}
 		return insertIntoStatementPtr, nil
+	case "UPDATE":
+		updateStatementPtr, err := p.parseUpdate()
+		if err != nil {
+			return nil, err
+		}
+		return updateStatementPtr, nil
 	default:
 		return nil, fmt.Errorf("expected query to begin with a statement")
 	}
