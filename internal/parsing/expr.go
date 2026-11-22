@@ -148,9 +148,10 @@ func (p *parser) parseOperand() (Expr, error) {
 	case lexing.Identifier:
 		return &ColumnRef{p.next().Body}, nil
 	case lexing.String:
-		return &Literal{p.next().Body}, nil
+		return &Literal{Kind: StringLiteral, Body: p.next().Body}, nil
 	case lexing.Number:
-		return &Literal{p.next().Body}, nil
+		return &Literal{Kind: NumberLiteral, Body: p.next().Body}, nil
+	// note: NullLiteral and BooleanLiteral are stored using TokenKind lexing.Keyword
 	case lexing.Param:
 		node, err := unpackParameter(p.next().Body)
 		if err != nil {
@@ -175,6 +176,8 @@ func (p *parser) parseOperand() (Expr, error) {
 		case "NULL":
 			p.next()
 			return &Literal{Kind: NullLiteral, Body: "NULL"}, nil
+		default:
+			return nil, fmt.Errorf("Invalid Keyword %s %s appearing in expression", p.read().Kind, p.read().Body)
 		}
 	default:
 		return nil, fmt.Errorf("Expected Identifier, String, Number, Parameter or (, got %s %s", p.read().Kind, p.read().Body)

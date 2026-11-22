@@ -23,6 +23,10 @@ func toSQLType(s string) (ir.SQLType, error) {
 		return ir.TypeText, nil
 	case "INT":
 		return ir.TypeInt, nil
+	case "TIMESTAMP":
+		return ir.TypeTimestamp, nil
+	case "BOOLEAN":
+		return ir.TypeBoolean, nil
 	default:
 		return ir.IllegalSQLType, fmt.Errorf("unsupported SQL type %q", s)
 	}
