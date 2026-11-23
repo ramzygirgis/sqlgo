@@ -1,6 +1,9 @@
 package ir
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func validSelect() Query {
 	return Query{
@@ -42,6 +45,24 @@ func validInsert() Query {
 	}
 }
 
+func validUpdate() Query {
+	return Query{
+		Name:        "RenameUser",
+		Cardinality: Exec,
+		Kind:        Update,
+		TargetTable: "users",
+		Parameters: []Parameter{
+			{Index: 1, SqlType: TypeText, Nullable: false},
+			{Index: 2, SqlType: TypeInt, Nullable: false},
+		},
+		TargetColumns: []Column{
+			{Name: "name", SqlType: TypeText, Nullable: false},
+		},
+		ResultColumns: nil,
+		Sql:           "UPDATE users SET name = $1 WHERE id = $2;",
+	}
+}
+
 func TestValidateAccepts(t *testing.T) {
 	tests := []struct {
 		name string
@@ -78,6 +99,14 @@ func TestValidateAccepts(t *testing.T) {
 			return q
 		}()},
 		{"insert :exec", validInsert()},
+
+		// --- update ---
+		{"update :exec", validUpdate()},
+		{"update with no params", func() Query {
+			q := validUpdate()
+			q.Parameters = nil
+			return q
+		}()},
 	}
 
 	for _, tt := range tests {
@@ -191,6 +220,26 @@ func TestValidateRejects(t *testing.T) {
 		{"select :exec", func(q *Query) {
 			q.Cardinality = Exec
 		}, validSelect},
+
+		// --- update ---
+		{"update :one", func(q *Query) {
+			q.Cardinality = One
+		}, validUpdate},
+		{"update :many", func(q *Query) {
+			q.Cardinality = Many
+		}, validUpdate},
+		{"update with result columns", func(q *Query) {
+			q.ResultColumns = []Column{{Name: "id", SqlType: TypeInt}}
+		}, validUpdate},
+		{"update with no target columns", func(q *Query) {
+			q.TargetColumns = nil
+		}, validUpdate},
+		{"update with a gap in params", func(q *Query) {
+			q.Parameters[1].Index = 3
+		}, validUpdate},
+		{"empty name on update", func(q *Query) {
+			q.Name = ""
+		}, validUpdate},
 	}
 
 	for _, tt := range tests {
@@ -199,6 +248,28 @@ func TestValidateRejects(t *testing.T) {
 			tt.mutate(&q)
 			if err := q.Validate(); err == nil {
 				t.Errorf("expected an error, got none\nquery: %+v", q)
+			}
+		})
+	}
+}
+
+// Errors for an UPDATE should say UPDATE, not some other statement.
+func TestValidateUpdateErrorsNameUpdate(t *testing.T) {
+	mutations := map[string]func(q *Query){
+		"result columns":    func(q *Query) { q.ResultColumns = []Column{{Name: "id", SqlType: TypeInt}} },
+		"no target columns": func(q *Query) { q.TargetColumns = nil },
+		"cardinality":       func(q *Query) { q.Cardinality = Many },
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			q := validUpdate()
+			mutate(&q)
+			err := q.Validate()
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), "UPDATE") {
+				t.Errorf("error %q should mention UPDATE", err)
 			}
 		})
 	}
@@ -225,6 +296,7 @@ func TestQueryKindString(t *testing.T) {
 		{IllegalQueryKind, "IllegalQueryKind"},
 		{Select, "Select"},
 		{Insert, "Insert"},
+		{Update, "Update"},
 		{QueryKind(99), "QueryKind(99)"},
 		{QueryKind(-1), "QueryKind(-1)"},
 	}
