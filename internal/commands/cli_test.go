@@ -648,3 +648,34 @@ func TestGenerateNoModule(t *testing.T) {
 		t.Error("expected an error outside a module, got none")
 	}
 }
+
+/* ---------- UPDATE ---------- */
+
+// UPDATE goes all the way through: discovery, parsing, analysis, codegen.
+func TestGenerateUpdate(t *testing.T) {
+	root := t.TempDir()
+	files := basicProject()
+	files["internal/accounts/updates.sql"] = `-- name: RenameUser :exec
+UPDATE users SET name = $1 WHERE id = $2;
+
+-- name: ClearBio :exec
+UPDATE users SET bio = NULL WHERE id = $1;
+`
+	writeTree(t, root, files)
+
+	if err := generateIn(t, root); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := readFile(t, root, "internal/accounts/updates.sql.go")
+	for _, want := range []string{
+		"func RenameUser(ctx context.Context, db models.DBTX, arg1 string, arg2 int32) error",
+		"func ClearBio(ctx context.Context, db models.DBTX, arg1 int32) error",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("updates.sql.go is missing:\n  %s\n\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, ", \nWHERE") || strings.Contains(got, ",\nWHERE") {
+		t.Errorf("generated SQL has a trailing comma before WHERE:\n%s", got)
+	}
+}
