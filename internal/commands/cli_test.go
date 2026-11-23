@@ -679,3 +679,35 @@ UPDATE users SET bio = NULL WHERE id = $1;
 		t.Errorf("generated SQL has a trailing comma before WHERE:\n%s", got)
 	}
 }
+
+/* ---------- DELETE ---------- */
+
+// DELETE goes all the way through: discovery, parsing, analysis, codegen.
+func TestGenerateDelete(t *testing.T) {
+	root := t.TempDir()
+	files := basicProject()
+	files["internal/accounts/deletes.sql"] = `-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1;
+
+-- name: DeleteAllUsers :exec
+DELETE FROM users;
+`
+	writeTree(t, root, files)
+
+	if err := generateIn(t, root); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := readFile(t, root, "internal/accounts/deletes.sql.go")
+	for _, want := range []string{
+		"func DeleteUser(ctx context.Context, db models.DBTX, arg1 int32) error",
+		"func DeleteAllUsers(ctx context.Context, db models.DBTX) error",
+		"DELETE FROM users",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("deletes.sql.go is missing:\n  %s\n\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "WHERE ;") || strings.Contains(got, "WHERE\n;") {
+		t.Errorf("generated SQL has an empty WHERE:\n%s", got)
+	}
+}
