@@ -84,7 +84,7 @@ func validateDeleteInvariants(q *Query) error {
 		return fmt.Errorf("DELETE statement has result columns")
 	}
 	if len(q.TargetColumns) != 0 {
-		return fmt.Errorf("DELETE statement has no target columns")
+		return fmt.Errorf("DELETE statement has target columns")
 	}
 	if !isDeleteCardinality(q.Cardinality) {
 		return fmt.Errorf("DELETE statement cannot have cardinality %s", q.Cardinality)

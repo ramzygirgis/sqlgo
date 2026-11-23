@@ -63,6 +63,21 @@ func validUpdate() Query {
 	}
 }
 
+func validDelete() Query {
+	return Query{
+		Name:        "DeleteUser",
+		Cardinality: Exec,
+		Kind:        Delete,
+		TargetTable: "users",
+		Parameters: []Parameter{
+			{Index: 1, SqlType: TypeInt, Nullable: false},
+		},
+		TargetColumns: nil,
+		ResultColumns: nil,
+		Sql:           "DELETE FROM users WHERE id = $1;",
+	}
+}
+
 func TestValidateAccepts(t *testing.T) {
 	tests := []struct {
 		name string
@@ -105,6 +120,20 @@ func TestValidateAccepts(t *testing.T) {
 		{"update with no params", func() Query {
 			q := validUpdate()
 			q.Parameters = nil
+			return q
+		}()},
+
+		// --- delete ---
+		{"delete :exec", validDelete()},
+		{"delete with no params (delete everything)", func() Query {
+			q := validDelete()
+			q.Parameters = nil
+			return q
+		}()},
+		{"delete with empty (non-nil) column slices", func() Query {
+			q := validDelete()
+			q.TargetColumns = []Column{}
+			q.ResultColumns = []Column{}
 			return q
 		}()},
 	}
@@ -240,6 +269,29 @@ func TestValidateRejects(t *testing.T) {
 		{"empty name on update", func(q *Query) {
 			q.Name = ""
 		}, validUpdate},
+
+		// --- delete ---
+		{"delete :one", func(q *Query) {
+			q.Cardinality = One
+		}, validDelete},
+		{"delete :many", func(q *Query) {
+			q.Cardinality = Many
+		}, validDelete},
+		{"delete with result columns", func(q *Query) {
+			q.ResultColumns = []Column{{Name: "id", SqlType: TypeInt}}
+		}, validDelete},
+		{"delete with target columns", func(q *Query) {
+			q.TargetColumns = []Column{{Name: "id", SqlType: TypeInt}}
+		}, validDelete},
+		{"delete with a gap in params", func(q *Query) {
+			q.Parameters[0].Index = 2
+		}, validDelete},
+		{"delete param with illegal type", func(q *Query) {
+			q.Parameters[0].SqlType = IllegalSQLType
+		}, validDelete},
+		{"empty name on delete", func(q *Query) {
+			q.Name = ""
+		}, validDelete},
 	}
 
 	for _, tt := range tests {
@@ -275,6 +327,35 @@ func TestValidateUpdateErrorsNameUpdate(t *testing.T) {
 	}
 }
 
+// Errors for a DELETE should say DELETE, and say what's actually wrong.
+func TestValidateDeleteErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		mutate      func(q *Query)
+		errContains string
+	}{
+		{"result columns", func(q *Query) { q.ResultColumns = []Column{{Name: "id", SqlType: TypeInt}} }, "has result columns"},
+		{"target columns", func(q *Query) { q.TargetColumns = []Column{{Name: "id", SqlType: TypeInt}} }, "has target columns"},
+		{"cardinality", func(q *Query) { q.Cardinality = Many }, "cardinality"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q := validDelete()
+			tt.mutate(&q)
+			err := q.Validate()
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), "DELETE") {
+				t.Errorf("error %q should mention DELETE", err)
+			}
+			if !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("error %q should mention %q", err, tt.errContains)
+			}
+		})
+	}
+}
+
 // Validate must not modify the query it checks.
 func TestValidateDoesNotMutate(t *testing.T) {
 	q := validSelect()
@@ -297,6 +378,7 @@ func TestQueryKindString(t *testing.T) {
 		{Select, "Select"},
 		{Insert, "Insert"},
 		{Update, "Update"},
+		{Delete, "Delete"},
 		{QueryKind(99), "QueryKind(99)"},
 		{QueryKind(-1), "QueryKind(-1)"},
 	}
