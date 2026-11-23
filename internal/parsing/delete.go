@@ -17,8 +17,8 @@ func (d *DeleteFromStatement) String() string {
 
 	sb.WriteString("DELETE FROM ")
 	sb.WriteString(d.TableName)
-	sb.WriteString("\nWHERE ")
 	if d.Where != nil {
+		sb.WriteString("\nWHERE ")
 		sb.WriteString(d.Where.String())
 	}
 	sb.WriteString(";")
