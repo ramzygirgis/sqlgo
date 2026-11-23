@@ -8,7 +8,7 @@ import (
 
 type SelectStatement struct {
 	ColumnNames []string
-	From        *FromKeyword
+	TableName   string
 	Where       Expr
 	All         bool
 }
@@ -31,21 +31,13 @@ func (s *SelectStatement) String() string {
 			sb.WriteString(",")
 		}
 	}
-	sb.WriteString(s.From.String())
+	sb.WriteString(s.TableName)
 	if s.Where != nil {
 		sb.WriteString(" WHERE ")
 		sb.WriteString(s.Where.String())
 	}
 	sb.WriteString(";")
 	return sb.String()
-}
-
-type FromKeyword struct {
-	TableName string
-}
-
-func (s *FromKeyword) String() string {
-	return fmt.Sprintf(" FROM %s", s.TableName)
 }
 
 func (p *parser) parseSelect() (*SelectStatement, error) {
@@ -78,7 +70,7 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		}
 	}
 
-	from, err := p.parseFrom()
+	tableName, err := p.expectKind(lexing.Identifier)
 	if err != nil {
 		return &SelectStatement{}, err
 	}
@@ -96,22 +88,8 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 
 	return &SelectStatement{
 		ColumnNames: colNames,
-		From:        from,
+		TableName:   tableName,
 		All:         all,
 		Where:       where,
 	}, nil
-}
-
-func (p *parser) parseFrom() (*FromKeyword, error) {
-	if _, err := p.expect(lexing.Keyword, "FROM"); err != nil {
-		return &FromKeyword{}, err
-	}
-	if p.read().Kind != lexing.Identifier {
-		return &FromKeyword{}, fmt.Errorf("expected table name identifier, got %v %s", p.read().Kind, p.read().Body)
-	}
-	table := p.next()
-	from := FromKeyword{
-		TableName: table.Body,
-	}
-	return &from, nil
 }
