@@ -26,6 +26,7 @@ func isKeyword(s string) bool {
 	keywordSet["VALUES"] = struct{}{}
 	keywordSet["UPDATE"] = struct{}{}
 	keywordSet["SET"] = struct{}{}
+	keywordSet["DELETE"] = struct{}{}
 	// storing true, false, null as keywords is kinda jank lol.
 	// but i think this is correct
 	keywordSet["TRUE"] = struct{}{}

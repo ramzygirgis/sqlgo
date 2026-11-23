@@ -50,7 +50,6 @@ func (p *parser) parseUpdate() (*UpdateStatement, error) {
 		return nil, err
 	}
 	tableName, err := p.expectKind(lexing.Identifier)
-
 	if err != nil {
 		return nil, err
 	}
