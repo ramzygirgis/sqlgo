@@ -5,17 +5,17 @@ import (
 	"strings"
 )
 
-type DeleteStatement struct {
+type DeleteFromStatement struct {
 	TableName string
 	Where     Expr
 }
 
-func (d *DeleteStatement) statementMarker() {}
+func (d *DeleteFromStatement) statementMarker() {}
 
-func (d *DeleteStatement) String() string {
+func (d *DeleteFromStatement) String() string {
 	var sb strings.Builder
 
-	sb.WriteString("DELETE ")
+	sb.WriteString("DELETE FROM ")
 	sb.WriteString(d.TableName)
 	sb.WriteString("\nWHERE ")
 	if d.Where != nil {
@@ -25,8 +25,12 @@ func (d *DeleteStatement) String() string {
 	return sb.String()
 }
 
-func (p *parser) parseDelete() (*DeleteStatement, error) {
+func (p *parser) parseDelete() (*DeleteFromStatement, error) {
 	if err := p.expectKeyword("DELETE"); err != nil {
+		return nil, err
+	}
+
+	if err := p.expectKeyword("FROM"); err != nil {
 		return nil, err
 	}
 
@@ -47,7 +51,7 @@ func (p *parser) parseDelete() (*DeleteStatement, error) {
 		return nil, err
 	}
 
-	return &DeleteStatement{
+	return &DeleteFromStatement{
 		TableName: tableName,
 		Where:     where,
 	}, nil
