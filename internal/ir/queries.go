@@ -69,3 +69,25 @@ func validateUpdateInvariants(q *Query) error {
 	}
 	return nil
 }
+
+func validateDeleteInvariants(q *Query) error {
+	if q.Kind != Delete {
+		return fmt.Errorf("non-DELETE statement passed into ir.validateDeleteInvariants")
+	}
+	/*
+	 DELETE statements should have:
+	 1. no result columns
+	 2. no target columns
+	 3. cardinality must be one of: Exec
+	*/
+	if len(q.ResultColumns) != 0 {
+		return fmt.Errorf("DELETE statement has result columns")
+	}
+	if len(q.TargetColumns) != 0 {
+		return fmt.Errorf("DELETE statement has no target columns")
+	}
+	if !isDeleteCardinality(q.Cardinality) {
+		return fmt.Errorf("DELETE statement cannot have cardinality %s", q.Cardinality)
+	}
+	return nil
+}

@@ -51,6 +51,12 @@ func (p *parser) parseStatement() (Statement, error) {
 			return nil, err
 		}
 		return updateStatementPtr, nil
+	case "DELETE":
+		deleteStatementPtr, err := p.parseDelete()
+		if err != nil {
+			return nil, err
+		}
+		return deleteStatementPtr, nil
 	default:
 		return nil, fmt.Errorf("expected query to begin with a statement")
 	}

@@ -25,6 +25,7 @@ func (q *Query) Validate() error {
 		return err
 	}
 
+	// might be useless
 	err = validateCardinality(q.Cardinality)
 	if err != nil {
 		return err
@@ -37,6 +38,8 @@ func (q *Query) Validate() error {
 		return validateInsertInvariants(q)
 	case Update:
 		return validateUpdateInvariants(q)
+	case Delete:
+		return validateDeleteInvariants(q)
 	default:
 		return fmt.Errorf("invalid query kind %s", q.Kind)
 	}

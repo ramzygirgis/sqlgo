@@ -11,10 +11,11 @@ const (
 	Select
 	Insert
 	Update
+	Delete
 )
 
 func (q QueryKind) String() string {
-	strings := [...]string{"IllegalQueryKind", "Select", "Insert", "Update"}
+	strings := [...]string{"IllegalQueryKind", "Select", "Insert", "Update", "Delete"}
 	if q < 0 || int(q) >= len(strings) {
 		return fmt.Sprintf("QueryKind(%d)", q)
 	}
