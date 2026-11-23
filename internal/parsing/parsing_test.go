@@ -539,3 +539,165 @@ func TestCardinalityString(t *testing.T) {
 		}
 	}
 }
+
+/* ---------- UPDATE ---------- */
+
+func parseUpdate(t *testing.T, q string) *UpdateStatement {
+	t.Helper()
+	stmt, err := Parse(q)
+	if err != nil {
+		t.Fatalf("parse %q: %v", q, err)
+	}
+	u, ok := stmt.(*UpdateStatement)
+	if !ok {
+		t.Fatalf("got %T, want *UpdateStatement", stmt)
+	}
+	return u
+}
+
+func TestParseUpdate(t *testing.T) {
+	tests := []struct {
+		name      string
+		query     string
+		table     string
+		columns   []string
+		wantWhere bool
+	}{
+		{"one pair with where", "UPDATE users SET name = $1 WHERE id = $2;", "users", []string{"name"}, true},
+		{"several pairs", "UPDATE users SET name = $1, bio = $2, active = TRUE WHERE id = $3;", "users", []string{"name", "bio", "active"}, true},
+		{"no where", "UPDATE users SET active = FALSE;", "users", []string{"active"}, false},
+		{"lowercase keywords", "update users set name = 'x' where id = 1;", "users", []string{"name"}, true},
+		{"compound where", "UPDATE users SET bio = NULL WHERE id = $1 AND (name = $2 OR name = $3);", "users", []string{"bio"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := parseUpdate(t, tt.query)
+			if u.TableName != tt.table {
+				t.Errorf("TableName = %q, want %q", u.TableName, tt.table)
+			}
+			var got []string
+			for _, cv := range u.CvPairs {
+				got = append(got, cv.ColumnRef.Name)
+			}
+			if len(got) != len(tt.columns) {
+				t.Fatalf("columns = %v, want %v", got, tt.columns)
+			}
+			for i := range got {
+				if got[i] != tt.columns[i] {
+					t.Errorf("columns = %v, want %v", got, tt.columns)
+					break
+				}
+			}
+			if (u.Where != nil) != tt.wantWhere {
+				t.Errorf("Where = %v, want present=%v", u.Where, tt.wantWhere)
+			}
+		})
+	}
+}
+
+func TestParseUpdateValues(t *testing.T) {
+	u := parseUpdate(t, "UPDATE users SET a = $1, b = 'x', c = 5, d = TRUE, e = NULL, f = g;")
+	want := []string{"*parsing.Parameter", "*parsing.Literal", "*parsing.Literal", "*parsing.Literal", "*parsing.Literal", "*parsing.ColumnRef"}
+	if len(u.CvPairs) != len(want) {
+		t.Fatalf("got %d pairs, want %d", len(u.CvPairs), len(want))
+	}
+	for i, cv := range u.CvPairs {
+		if got := typeName(cv.Value); got != want[i] {
+			t.Errorf("pair %d (%s): value is %s, want %s", i, cv.ColumnRef.Name, got, want[i])
+		}
+	}
+}
+
+func typeName(e Expr) string {
+	switch e.(type) {
+	case *Parameter:
+		return "*parsing.Parameter"
+	case *Literal:
+		return "*parsing.Literal"
+	case *ColumnRef:
+		return "*parsing.ColumnRef"
+	case *BinaryExpr:
+		return "*parsing.BinaryExpr"
+	default:
+		return "unknown"
+	}
+}
+
+// The printed SQL is what ends up in the generated code, so it has to be valid.
+func TestUpdateRoundTrip(t *testing.T) {
+	tests := []struct{ query, want string }{
+		{
+			"UPDATE users SET name = $1 WHERE id = $2;",
+			"UPDATE users SET name = $1 WHERE (id = $2);",
+		},
+		{
+			"UPDATE users SET name = $1, bio = $2 WHERE id = $3;",
+			"UPDATE users SET name = $1, bio = $2 WHERE (id = $3);",
+		},
+		{
+			"UPDATE users SET active = TRUE;",
+			"UPDATE users SET active = TRUE;",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			got := normalize(parseUpdate(t, tt.query).String())
+			if got != tt.want {
+				t.Errorf("\n got: %s\nwant: %s", got, tt.want)
+			}
+			// printing must be stable: parse what we printed and print again
+			if again := normalize(parseUpdate(t, got).String()); again != got {
+				t.Errorf("not stable:\n first: %s\nsecond: %s", got, again)
+			}
+		})
+	}
+}
+
+func TestParseUpdateErrors(t *testing.T) {
+	tests := []struct{ name, query string }{
+		{"no table", "UPDATE SET name = $1;"},
+		{"no SET", "UPDATE users name = $1;"},
+		{"no pairs", "UPDATE users SET;"},
+		{"pair without value", "UPDATE users SET name =;"},
+		{"pair without =", "UPDATE users SET name $1;"},
+		{"non-= comparator", "UPDATE users SET name < $1;"},
+		{"trailing comma", "UPDATE users SET name = $1, WHERE id = $2;"},
+		{"missing semicolon", "UPDATE users SET name = $1 WHERE id = $2"},
+		{"empty WHERE", "UPDATE users SET name = $1 WHERE;"},
+		{"junk after semicolon", "UPDATE users SET name = $1; garbage"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := Parse(tt.query); err == nil {
+				t.Errorf("expected an error for %q", tt.query)
+			}
+		})
+	}
+}
+
+// Several UPDATEs in one file: each must stop at its own semicolon.
+func TestParseQueriesWithUpdates(t *testing.T) {
+	qs, err := ParseQueries(`-- name: RenameUser :exec
+UPDATE users SET name = $1 WHERE id = $2;
+
+-- name: DeactivateAll :exec
+UPDATE users SET active = FALSE;
+
+-- name: GetUser :one
+SELECT id FROM users WHERE id = $1;
+`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(qs) != 3 {
+		t.Fatalf("got %d queries, want 3", len(qs))
+	}
+	for i, want := range []string{"RenameUser", "DeactivateAll"} {
+		if qs[i].Name != want {
+			t.Errorf("query %d: Name = %q, want %q", i, qs[i].Name, want)
+		}
+		if _, ok := qs[i].Statement.(*UpdateStatement); !ok {
+			t.Errorf("query %d: got %T, want *UpdateStatement", i, qs[i].Statement)
+		}
+	}
+}
