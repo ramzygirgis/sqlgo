@@ -13,7 +13,7 @@ import (
 // The caller (Analyze's type switch) has already narrowed the statement to
 // *parsing.SelectStatement, so no second type assertion is needed here.
 func handleSelect(cat *catalog.Catalog, s *parsing.SelectStatement) (*UnannotatedQuery, error) {
-	tableName := s.From.TableName
+	tableName := s.TableName
 	table, ok := cat.Tables[tableName]
 	if !ok {
 		return nil, fmt.Errorf("table %q does not exist", tableName)
@@ -92,7 +92,8 @@ func expandedSqlString(s *parsing.SelectStatement, columns []ir.Column) string {
 			sb.WriteString(",")
 		}
 	}
-	sb.WriteString(s.From.String())
+	sb.WriteString(" FROM ")
+	sb.WriteString(s.TableName)
 	if s.Where != nil {
 		sb.WriteString(" WHERE ")
 		sb.WriteString(s.Where.String())

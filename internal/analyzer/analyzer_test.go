@@ -609,3 +609,93 @@ func TestAnalyzeUpdateErrors(t *testing.T) {
 		})
 	}
 }
+
+/* ---------- DELETE ---------- */
+
+func TestAnalyzeDelete(t *testing.T) {
+	tests := []struct {
+		name   string
+		query  string
+		params []ir.Parameter
+		sql    string
+	}{
+		{
+			name:   "by id",
+			query:  "DELETE FROM users WHERE id = $1;",
+			params: []ir.Parameter{param(1, ir.TypeInt, false)},
+			sql:    "DELETE FROM users WHERE (id = $1);",
+		},
+		{
+			name:  "compound where",
+			query: "DELETE FROM users WHERE id = $1 AND name = $2;",
+			params: []ir.Parameter{
+				param(1, ir.TypeInt, false),
+				param(2, ir.TypeText, false),
+			},
+		},
+		{
+			name:   "params numbered out of textual order",
+			query:  "DELETE FROM users WHERE name = $2 AND id = $1;",
+			params: []ir.Parameter{param(1, ir.TypeInt, false), param(2, ir.TypeText, false)},
+		},
+		{
+			name:  "no where deletes everything",
+			query: "DELETE FROM users;",
+			sql:   "DELETE FROM users;",
+		},
+		{
+			name:  "literal comparison takes no params",
+			query: "DELETE FROM users WHERE name = 'x';",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q, err := analyze(t, tt.query, ":exec")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if q.Kind != ir.Delete {
+				t.Errorf("Kind = %s, want Delete", q.Kind)
+			}
+			if q.TargetTable != "users" {
+				t.Errorf("TargetTable = %q, want users", q.TargetTable)
+			}
+			if len(q.ResultColumns) != 0 || len(q.TargetColumns) != 0 {
+				t.Errorf("DELETE should have no columns, got result %v, target %v", q.ResultColumns, q.TargetColumns)
+			}
+			checkParams(t, q.Parameters, tt.params)
+			if tt.sql != "" {
+				if got := normalize(q.Sql); got != tt.sql {
+					t.Errorf("Sql:\n got: %s\nwant: %s", got, tt.sql)
+				}
+			}
+		})
+	}
+}
+
+func TestAnalyzeDeleteErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		query       string
+		card        string
+		errContains string
+	}{
+		{"unknown table", "DELETE FROM nope WHERE id = $1;", ":exec", "nope"},
+		{"unknown where column", "DELETE FROM users WHERE nope = $1;", ":exec", "nope"},
+		{"param used with two types", "DELETE FROM users WHERE id = $1 AND name = $1;", ":exec", "type mismatch"},
+		{"gap in params", "DELETE FROM users WHERE id = $2;", ":exec", "$1"},
+		{"delete :one", "DELETE FROM users WHERE id = $1;", ":one", ""},
+		{"delete :many", "DELETE FROM users WHERE id = $1;", ":many", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := analyze(t, tt.query, tt.card)
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("error %q should mention %q", err, tt.errContains)
+			}
+		})
+	}
+}

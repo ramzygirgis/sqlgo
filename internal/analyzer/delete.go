@@ -8,7 +8,7 @@ import (
 	"github.com/ramzygirgis/sqlgo/internal/parsing"
 )
 
-func handleDelete(cat *catalog.Catalog, s *parsing.DeleteStatement) (*UnannotatedQuery, error) {
+func handleDelete(cat *catalog.Catalog, s *parsing.DeleteFromStatement) (*UnannotatedQuery, error) {
 	tableName := s.TableName
 	table, ok := cat.Tables[tableName]
 	if !ok {
@@ -34,7 +34,7 @@ func handleDelete(cat *catalog.Catalog, s *parsing.DeleteStatement) (*Unannotate
 	}, nil
 }
 
-func collectAndInferDeleteParams(table *catalog.Table, s *parsing.DeleteStatement) ([]ir.Parameter, error) {
+func collectAndInferDeleteParams(table *catalog.Table, s *parsing.DeleteFromStatement) ([]ir.Parameter, error) {
 	var params []Param
 	var err error
 	if s.Where != nil {

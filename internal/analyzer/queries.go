@@ -31,7 +31,7 @@ func AnalyzeQuery(cat *catalog.Catalog, q *parsing.AnnotatedQuery) (*ir.Query, e
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s", queryName, err)
 		}
-	case *parsing.DeleteStatement:
+	case *parsing.DeleteFromStatement:
 		unannotatedQuery, err = handleDelete(cat, s)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s", queryName, err)
