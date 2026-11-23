@@ -31,6 +31,7 @@ func (s *SelectStatement) String() string {
 			sb.WriteString(",")
 		}
 	}
+	sb.WriteString(" FROM ")
 	sb.WriteString(s.TableName)
 	if s.Where != nil {
 		sb.WriteString(" WHERE ")
@@ -68,6 +69,11 @@ func (p *parser) parseSelect() (*SelectStatement, error) {
 		} else {
 			colNames = append(colNames, colName)
 		}
+	}
+
+	_, err = p.expect(lexing.Keyword, "FROM")
+	if err != nil {
+		return nil, err
 	}
 
 	tableName, err := p.expectKind(lexing.Identifier)

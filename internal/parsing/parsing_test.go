@@ -187,7 +187,7 @@ func TestParseErrors(t *testing.T) {
 		{"whitespace only", "   \n\t "},
 		{"comment only", `-- nothing here`},
 		{"missing semicolon", `SELECT name FROM users`},
-		{"unknown statement", `DELETE FROM users;`},
+		{"unknown statement", `DROP TABLE users;`},
 		{"trailing junk after semicolon", `SELECT name FROM users; junk`},
 		{"lex error surfaces", `SELECT @ FROM users;`},
 		{"annotation not allowed in Parse", "-- name: GetUser :one\nSELECT name FROM users;"},
@@ -496,7 +496,7 @@ func TestParseQueriesErrors(t *testing.T) {
 		{"missing semicolon before next annotation", "-- name: A :one\nSELECT a FROM t\n-- name: B :one\nSELECT b FROM t;", ""},
 		{"parse error in statement", "-- name: A :one\nSELECT FROM t;", ""},
 		{"parse error in second statement", "-- name: A :one\nSELECT a FROM t;\n-- name: B :one\nSELECT a b FROM t;", ""},
-		{"unsupported statement", "-- name: A :exec\nDELETE FROM t;", ""},
+		{"unsupported statement", "-- name: A :exec\nDROP TABLE t;", ""},
 		{"two statements under one annotation", "-- name: A :many\nSELECT a FROM t;\nSELECT b FROM t;", ""},
 		{"junk after last statement", "-- name: A :one\nSELECT a FROM t;\njunk", ""},
 
@@ -698,6 +698,111 @@ SELECT id FROM users WHERE id = $1;
 		}
 		if _, ok := qs[i].Statement.(*UpdateStatement); !ok {
 			t.Errorf("query %d: got %T, want *UpdateStatement", i, qs[i].Statement)
+		}
+	}
+}
+
+/* ---------- DELETE ---------- */
+
+func parseDelete(t *testing.T, q string) *DeleteFromStatement {
+	t.Helper()
+	stmt, err := Parse(q)
+	if err != nil {
+		t.Fatalf("parse %q: %v", q, err)
+	}
+	d, ok := stmt.(*DeleteFromStatement)
+	if !ok {
+		t.Fatalf("got %T, want *DeleteFromStatement", stmt)
+	}
+	return d
+}
+
+func TestParseDelete(t *testing.T) {
+	tests := []struct {
+		name      string
+		query     string
+		wantWhere bool
+	}{
+		{"with where", "DELETE FROM users WHERE id = $1;", true},
+		{"without where", "DELETE FROM users;", false},
+		{"lowercase keywords", "delete from users where id = 1;", true},
+		{"compound where", "DELETE FROM users WHERE active = FALSE AND (id = $1 OR name = $2);", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := parseDelete(t, tt.query)
+			if d.TableName != "users" {
+				t.Errorf("TableName = %q, want users", d.TableName)
+			}
+			if (d.Where != nil) != tt.wantWhere {
+				t.Errorf("Where = %v, want present=%v", d.Where, tt.wantWhere)
+			}
+		})
+	}
+}
+
+// The printed SQL is what ends up in the generated code, so it has to be valid.
+func TestDeleteRoundTrip(t *testing.T) {
+	tests := []struct{ query, want string }{
+		{"DELETE FROM users WHERE id = $1;", "DELETE FROM users WHERE (id = $1);"},
+		{"DELETE FROM users;", "DELETE FROM users;"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.query, func(t *testing.T) {
+			got := normalize(parseDelete(t, tt.query).String())
+			if got != tt.want {
+				t.Errorf("\n got: %s\nwant: %s", got, tt.want)
+			}
+			if again := normalize(parseDelete(t, got).String()); again != got {
+				t.Errorf("not stable:\n first: %s\nsecond: %s", got, again)
+			}
+		})
+	}
+}
+
+func TestParseDeleteErrors(t *testing.T) {
+	tests := []struct{ name, query string }{
+		{"missing FROM", "DELETE users WHERE id = $1;"},
+		{"no table", "DELETE FROM WHERE id = $1;"},
+		{"no table, no where", "DELETE FROM;"},
+		{"columns listed", "DELETE id FROM users;"},
+		{"empty WHERE", "DELETE FROM users WHERE;"},
+		{"missing semicolon", "DELETE FROM users WHERE id = $1"},
+		{"junk after table", "DELETE FROM users garbage;"},
+		{"junk after semicolon", "DELETE FROM users; garbage"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := Parse(tt.query); err == nil {
+				t.Errorf("expected an error for %q", tt.query)
+			}
+		})
+	}
+}
+
+// Several DELETEs in one file: each must stop at its own semicolon.
+func TestParseQueriesWithDeletes(t *testing.T) {
+	qs, err := ParseQueries(`-- name: DeleteUser :exec
+DELETE FROM users WHERE id = $1;
+
+-- name: DeleteAll :exec
+DELETE FROM users;
+
+-- name: GetUser :one
+SELECT id FROM users WHERE id = $1;
+`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(qs) != 3 {
+		t.Fatalf("got %d queries, want 3", len(qs))
+	}
+	for i, want := range []string{"DeleteUser", "DeleteAll"} {
+		if qs[i].Name != want {
+			t.Errorf("query %d: Name = %q, want %q", i, qs[i].Name, want)
+		}
+		if _, ok := qs[i].Statement.(*DeleteFromStatement); !ok {
+			t.Errorf("query %d: got %T, want *DeleteFromStatement", i, qs[i].Statement)
 		}
 	}
 }
