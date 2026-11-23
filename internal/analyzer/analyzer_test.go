@@ -491,3 +491,121 @@ func TestAnalyzeDoesNotMutateAST(t *testing.T) {
 		t.Errorf("AnalyzeQuery modified the statement:\nbefore: %s\n after: %s", before, after)
 	}
 }
+
+/* ---------- UPDATE ---------- */
+
+func TestAnalyzeUpdate(t *testing.T) {
+	tests := []struct {
+		name          string
+		query         string
+		targetColumns []ir.Column
+		params        []ir.Parameter
+	}{
+		{
+			name:          "set and where",
+			query:         "UPDATE users SET name = $1 WHERE id = $2;",
+			targetColumns: []ir.Column{nameCol},
+			params:        []ir.Parameter{param(1, ir.TypeText, false), param(2, ir.TypeInt, false)},
+		},
+		{
+			name:          "nullable column gives a nullable param",
+			query:         "UPDATE users SET bio = $1 WHERE id = $2;",
+			targetColumns: []ir.Column{bioCol},
+			params:        []ir.Parameter{param(1, ir.TypeText, true), param(2, ir.TypeInt, false)},
+		},
+		{
+			name:          "several pairs",
+			query:         "UPDATE users SET name = $1, bio = $2 WHERE id = $3;",
+			targetColumns: []ir.Column{nameCol, bioCol},
+			params: []ir.Parameter{
+				param(1, ir.TypeText, false),
+				param(2, ir.TypeText, true),
+				param(3, ir.TypeInt, false),
+			},
+		},
+		{
+			name:          "params numbered out of textual order",
+			query:         "UPDATE users SET name = $2 WHERE id = $1;",
+			targetColumns: []ir.Column{nameCol},
+			params:        []ir.Parameter{param(1, ir.TypeInt, false), param(2, ir.TypeText, false)},
+		},
+		{
+			name:          "literal values take no params",
+			query:         "UPDATE users SET name = 'x', bio = NULL WHERE id = $1;",
+			targetColumns: []ir.Column{nameCol, bioCol},
+			params:        []ir.Parameter{param(1, ir.TypeInt, false)},
+		},
+		{
+			name:          "no where",
+			query:         "UPDATE users SET bio = $1;",
+			targetColumns: []ir.Column{bioCol},
+			params:        []ir.Parameter{param(1, ir.TypeText, true)},
+		},
+		{
+			name:          "same param in set and where, same type",
+			query:         "UPDATE users SET name = $1 WHERE name = $1;",
+			targetColumns: []ir.Column{nameCol},
+			params:        []ir.Parameter{param(1, ir.TypeText, false)},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q, err := analyze(t, tt.query, ":exec")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if q.Kind != ir.Update {
+				t.Errorf("Kind = %s, want Update", q.Kind)
+			}
+			if q.TargetTable != "users" {
+				t.Errorf("TargetTable = %q, want users", q.TargetTable)
+			}
+			if len(q.ResultColumns) != 0 {
+				t.Errorf("ResultColumns = %v, want none", q.ResultColumns)
+			}
+			checkColumns(t, "TargetColumns", q.TargetColumns, tt.targetColumns)
+			checkParams(t, q.Parameters, tt.params)
+		})
+	}
+}
+
+// The SQL stored in the IR is what gets embedded in generated code.
+func TestAnalyzeUpdateSQL(t *testing.T) {
+	q, err := analyze(t, "UPDATE users SET name = $1, bio = $2 WHERE id = $3;", ":exec")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "UPDATE users SET name = $1, bio = $2 WHERE (id = $3);"
+	if got := normalize(q.Sql); got != want {
+		t.Errorf("Sql:\n got: %s\nwant: %s", got, want)
+	}
+}
+
+func TestAnalyzeUpdateErrors(t *testing.T) {
+	tests := []struct {
+		name        string
+		query       string
+		card        string
+		errContains string
+	}{
+		{"unknown table", "UPDATE nope SET name = $1;", ":exec", "nope"},
+		{"unknown set column", "UPDATE users SET nmae = $1;", ":exec", "nmae"},
+		{"unknown where column", "UPDATE users SET name = $1 WHERE nope = $2;", ":exec", "nope"},
+		{"param used with two types", "UPDATE users SET name = $1 WHERE id = $1;", ":exec", "type mismatch"},
+		{"gap in params", "UPDATE users SET name = $1 WHERE id = $3;", ":exec", "$2"},
+		{"NULL into NOT NULL column", "UPDATE users SET name = NULL WHERE id = $1;", ":exec", "name"},
+		{"update :one", "UPDATE users SET name = $1 WHERE id = $2;", ":one", ""},
+		{"update :many", "UPDATE users SET name = $1 WHERE id = $2;", ":many", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := analyze(t, tt.query, tt.card)
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+			if !strings.Contains(err.Error(), tt.errContains) {
+				t.Errorf("error %q should mention %q", err, tt.errContains)
+			}
+		})
+	}
+}
