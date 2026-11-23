@@ -152,6 +152,7 @@ func TestLexBodies(t *testing.T) {
 		{"param keeps dollar", `$12`, []string{"$12"}},
 		{"insert keywords uppercased", `insert into t values`, []string{"INSERT", "INTO", "t", "VALUES"}},
 		{"literal keywords uppercased", `true FALSE nUlL`, []string{"TRUE", "FALSE", "NULL"}},
+		{"delete keywords uppercased", `delete from t`, []string{"DELETE", "FROM", "t"}},
 
 		// --- annotations: body is the function name ---
 		{"annotation body is the name", "-- name: GetUser :one", []string{"GetUser"}},
