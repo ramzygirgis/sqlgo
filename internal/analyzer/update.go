@@ -20,12 +20,12 @@ func handleUpdate(cat *catalog.Catalog, s *parsing.UpdateStatement) (*Unannotate
 		return nil, err
 	}
 
+	resultColumns := make([]ir.Column, 0)
+
 	parameters, err := collectAndInferUpdateParams(table, s)
 	if err != nil {
 		return nil, err
 	}
-
-	resultColumns := make([]ir.Column, 0)
 
 	return &UnannotatedQuery{
 		Kind:          ir.Update,
